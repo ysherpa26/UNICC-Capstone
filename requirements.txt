@@ -1,0 +1,7 @@
+anthropic
+groq
+fastapi
+uvicorn
+requests
+gitpython
+python-dotenv
