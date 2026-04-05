@@ -1164,7 +1164,7 @@
       }
       
       // 6. L2 Expert Reports
-      renderL2Experts(data.agent_reports);
+      renderL2Experts(data.agent_assessments);
 
       // 7. Deliberation Log
       const delibContainer = document.getElementById('res-l3-deliberation-container');
@@ -1449,6 +1449,178 @@
       showState('state-error');
     }
 
+    // --- functionName: submitEvaluation: sends the form data to the backend ---
+    async function submitEvaluation(event) {
+      event.preventDefault(); // Prevent standard browser submit
+      
+      const btnGithub = document.getElementById('tab-github');
+      const activeMode = btnGithub.classList.contains('active') ? 'github' : 'manual';
+      
+      // 1. Validate inputs
+      if (!validateForm(activeMode)) {
+        return;
+      }
+
+      // 4. Disable submit button (prevent double-click)
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Evaluating...';
+      
+      // 2. Build request body based on active tab
+      let payload = {};
+      if (activeMode === 'github') {
+         payload = { github_url: document.getElementById('github-url').value.trim() };
+      } else {
+         const authVal = document.getElementById('manual-auth').value.trim() || 'none';
+         const ftVal = document.getElementById('manual-finetune').value.trim() || 'none';
+         const logVal = document.getElementById('manual-logging').value || 'disabled';
+         
+         payload = {
+           model_profile: {
+             name: document.getElementById('manual-name').value.trim(),
+             type: document.getElementById('manual-type').value.trim(),
+             use_case: document.getElementById('manual-usecase').value.trim(),
+             deployment: document.getElementById('manual-deployment').value,
+             auth: authVal,
+             finetune_data: ftVal,
+             logging: logVal
+           }
+         };
+      }
+
+      // WARNING: We log payload here so you can verify it in console.
+      console.log("Submitting payload:", JSON.stringify(payload));
+      
+      // 3. Switch to LOADING state
+      showState('state-loading');
+
+      // MOCK MODE Handling
+      if (typeof MOCK_MODE !== 'undefined' && MOCK_MODE) {
+         setTimeout(function() {
+            // Mock out L3 arrays
+            const mockGaps = [
+              { gap: "No explicit system prompt boundaries", impact: "High", priority: "High", recommended_action: "Implement strict system prompt guardrails", eta_days: 14 },
+              { gap: "Logging does not capture failed interactions", impact: "Medium", priority: "Medium", recommended_action: "Update logging schema to include negative state captures", eta_days: 7 }
+            ];
+
+            // Ensure the mock has the fields expected by the renderer
+            const renderedData = Object.assign({
+              final_recommendation: "review",
+              synthesized_summary: "The ensemble detected several moderate risks. The agent requires updates before deployment.",
+              confidence: 85,
+              disagreements: ["OWASP flagged prompt injection as high probability, whereas EU AI Act classified it as a documentation failure.", "UNESCO diverged on severity of dialect transcription bias, marking it critical while others saw it as moderate."],
+              deliberation_log: [
+                "Synthesized initial findings from all three regulatory assessments.",
+                "Identified conflicting severity for prompt injection; weighted OWASP Technical findings higher due to the agent's deployment nature.",
+                "Calculated overall confidence score based on mapping divergences in the Societal risk framework.",
+                "Generated final unified recommendation of 'REVIEW' pending essential fixes."
+              ]
+            }, MOCK_RESPONSE);
+            
+            renderedData.agent_assessments = [
+              Object.assign({}, MOCK_RESPONSE, {
+                report_meta: { generator: 'eu_ai_act', run_id: 'rnd_8a9a23', generated_at: '2026-04-05T14:35:00Z', framework_version: '2.1' },
+                final_recommendation: 'review',
+                executive_summary: "The agent shows promising capability but lacks comprehensive human oversight and logging as mandated by the EU AI Act.",
+                gaps_and_actions: mockGaps
+              }),
+              Object.assign({}, MOCK_RESPONSE, {
+                report_meta: { generator: 'owasp', run_id: 'rnd_2b4f99', generated_at: '2026-04-05T14:35:01Z', framework_version: '4.0' },
+                final_recommendation: 'hold_and_fix',
+                executive_summary: "Severe vulnerabilities related to prompt injection and insufficient input validation detected.",
+                top_risks: MOCK_RESPONSE.top_risks ? MOCK_RESPONSE.top_risks.filter(function(r) { return r.category === 'Technical'; }) : [],
+                gaps_and_actions: mockGaps
+              }),
+              Object.assign({}, MOCK_RESPONSE, {
+                report_meta: { generator: 'unesco', run_id: 'rnd_1e3d77', generated_at: '2026-04-05T14:35:02Z', framework_version: '1.2' },
+                final_recommendation: 'review',
+                executive_summary: "The model demonstrates ethical risks related to representation in speech training datasets, posing slight non-discrimination risks.",
+                gaps_and_actions: mockGaps
+              })
+            ];
+            
+            renderResults(renderedData);
+            showState('state-results');
+         }, 1500);
+         return; // Short-circuit actual fetch
+      }
+
+      // 5. Start 120-second timeout timer
+      const timeoutId = setTimeout(function() {
+        handleError(
+          "Request Timed Out", 
+          "The evaluation is taking longer than expected. The server may be busy — please try again."
+        );
+      }, 120000);
+
+      // WARNING: Never use innerHTML to display API response data.
+      // Always use textContent or createTextNode to prevent code injection.
+
+      // WARNING: Do not assume the response has all fields.
+      // P2's pipeline may return partial data if an agent fails mid-evaluation.
+      // Always check for field existence before accessing nested properties.
+      // Use optional chaining: response?.agent_assessments?.[0]?.category_summary
+
+      // 6. Call fetch()
+      fetch('/api/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(response) {
+        clearTimeout(timeoutId); // 9. In all cases: clear timeout
+        return response.json().catch(function() {
+           throw Error("Unexpected Response");
+        });
+      })
+      .then(function(data) {
+        if (data.error === true) {
+          handleError(
+            "Evaluation Failed", 
+            data.error_message || "Unknown error occurred.", 
+            data.error_code || ""
+          );
+          return;
+        }
+        
+        // 7. On success: parse JSON, validate required fields exist, switch to RESULTS state
+        const hasReqs = Boolean(
+          data &&
+          typeof data.final_recommendation === 'string' && 
+          typeof data.synthesized_summary === 'string' && 
+          (data.confidence !== undefined) && 
+          data.agent_assessments && Array.isArray(data.agent_assessments) && data.agent_assessments.length >= 1
+        );
+
+        if (!hasReqs) {
+          handleError(
+            "Unexpected Response", 
+            "The server returned a response that could not be understood. Core logic properties were missing."
+          );
+          return;
+        }
+
+        renderResults(data);
+        showState('state-results');
+      })
+      .catch(function(err) {
+        clearTimeout(timeoutId); 
+        
+        // 8. On error: switch to ERROR state with appropriate message
+        if (err.message === "Unexpected Response") {
+           handleError(
+             "Unexpected Response", 
+             "The server returned a response that could not be understood. This may indicate a configuration issue."
+           );
+        } else {
+           handleError(
+             "Connection Error", 
+             "Could not reach the evaluation server. Make sure the server is running at http://localhost:8000 and try again."
+           );
+        }
+      });
+    }
+
     // --- functionName: setupEventListeners: sets up form and button clicks ---
     // Attaches initial click tracking so the buttons work right away.
     function setupEventListeners() {
@@ -1469,150 +1641,7 @@
       }
 
       if (formElement) {
-        formElement.addEventListener('submit', function(event) {
-          event.preventDefault(); // Prevent standard browser submit
-          
-          const activeMode = btnGithub.classList.contains('active') ? 'github' : 'manual';
-          
-          if (!validateForm(activeMode)) {
-            return;
-          }
-
-          // Disable button to prevent double-submit
-          submitBtn.disabled = true;
-          submitBtn.textContent = 'Evaluating...';
-          
-          let payload = {};
-          if (activeMode === 'github') {
-             payload = { github_url: document.getElementById('github-url').value.trim() };
-          } else {
-             payload = {
-               name: document.getElementById('manual-name').value.trim(),
-               type: document.getElementById('manual-type').value.trim(),
-               use_case: document.getElementById('manual-usecase').value.trim(),
-               deployment: document.getElementById('manual-deployment').value,
-               auth: document.getElementById('manual-auth').value.trim(),
-               finetune_data: document.getElementById('manual-finetune').value.trim(),
-               logging: document.getElementById('manual-logging').value
-             };
-          }
-
-          // WARNING: We log payload here so you can verify it in console.
-          console.log("Submitting payload:", JSON.stringify(payload));
-          
-          // Switch to loading state immediately
-          showState('state-loading');
-
-          if (typeof MOCK_MODE !== 'undefined' && MOCK_MODE) {
-             setTimeout(function() {
-                // Mock out L3 arrays
-                const mockGaps = [
-                  { gap: "No explicit system prompt boundaries", impact: "High", priority: "High", recommended_action: "Implement strict system prompt guardrails", eta_days: 14 },
-                  { gap: "Logging does not capture failed interactions", impact: "Medium", priority: "Medium", recommended_action: "Update logging schema to include negative state captures", eta_days: 7 }
-                ];
-
-                // Ensure the mock has the fields expected by the renderer
-                const renderedData = Object.assign({
-                  confidence: 85,
-                  disagreements: ["OWASP flagged prompt injection as high probability, whereas EU AI Act classified it as a documentation failure.", "UNESCO diverged on severity of dialect transcription bias, marking it critical while others saw it as moderate."],
-                  deliberation_log: [
-                    "Synthesized initial findings from all three regulatory assessments.",
-                    "Identified conflicting severity for prompt injection; weighted OWASP Technical findings higher due to the agent's deployment nature.",
-                    "Calculated overall confidence score based on mapping divergences in the Societal risk framework.",
-                    "Generated final unified recommendation of 'REVIEW' pending essential fixes."
-                  ]
-                }, MOCK_RESPONSE);
-                
-                renderedData.agent_reports = [
-                  Object.assign({}, MOCK_RESPONSE, {
-                    report_meta: { generator: 'eu_ai_act', run_id: 'rnd_8a9a23', generated_at: '2026-04-05T14:35:00Z', framework_version: '2.1' },
-                    final_recommendation: 'review',
-                    executive_summary: "The agent shows promising capability but lacks comprehensive human oversight and logging as mandated by the EU AI Act.",
-                    gaps_and_actions: mockGaps
-                  }),
-                  Object.assign({}, MOCK_RESPONSE, {
-                    report_meta: { generator: 'owasp', run_id: 'rnd_2b4f99', generated_at: '2026-04-05T14:35:01Z', framework_version: '4.0' },
-                    final_recommendation: 'hold_and_fix',
-                    executive_summary: "Severe vulnerabilities related to prompt injection and insufficient input validation detected.",
-                    top_risks: MOCK_RESPONSE.top_risks ? MOCK_RESPONSE.top_risks.filter(function(r) { return r.category === 'Technical'; }) : [],
-                    gaps_and_actions: mockGaps
-                  }),
-                  Object.assign({}, MOCK_RESPONSE, {
-                    report_meta: { generator: 'unesco', run_id: 'rnd_1e3d77', generated_at: '2026-04-05T14:35:02Z', framework_version: '1.2' },
-                    final_recommendation: 'review',
-                    executive_summary: "The model demonstrates ethical risks related to representation in speech training datasets, posing slight non-discrimination risks.",
-                    gaps_and_actions: mockGaps
-                  })
-                ];
-                
-                renderResults(renderedData);
-                showState('state-results');
-             }, 1500);
-             return; // Short-circuit actual fetch
-          }
-
-          // Initialize a 120-second timeout to handle hung requests
-          const timeoutId = setTimeout(function() {
-            handleError(
-              "Request Timed Out", 
-              "The evaluation is taking longer than expected. The server may be busy — please try again."
-            );
-          }, 120000);
-
-          // WARNING: Never use innerHTML to display API response data.
-          // Always use textContent or createTextNode to prevent code injection.
-
-          // Send POST request
-          fetch('/api/evaluate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          })
-          .then(function(response) {
-            clearTimeout(timeoutId); // Clear timeout since we got a response
-            return response.json().catch(function() {
-               throw Error("Unexpected Response");
-            });
-          })
-          .then(function(data) {
-            if (data.error === true) {
-              handleError(
-                "Evaluation Failed", 
-                data.error_message || "Unknown error occurred.", 
-                data.error_code || ""
-              );
-              return;
-            }
-            
-            // Check if response shape looks roughly correct
-            if (!data || typeof data !== 'object') {
-              handleError(
-                "Unexpected Response", 
-                "The server returned a response that could not be understood. This may indicate a configuration issue."
-              );
-              return;
-            }
-
-            // Call our new render function
-            renderResults(data);
-            showState('state-results');
-          })
-          .catch(function(err) {
-            clearTimeout(timeoutId); // Make sure timeout doesn't run if network fails 
-            
-            if (err.message === "Unexpected Response") {
-               handleError(
-                 "Unexpected Response", 
-                 "The server returned a response that could not be understood. This may indicate a configuration issue."
-               );
-            } else {
-               handleError(
-                 "Connection Error", 
-                 "Could not reach the evaluation server. Make sure the server is running at http://localhost:8000 and try again."
-               );
-            }
-          });
-        });
+        formElement.addEventListener('submit', submitEvaluation);
       }
 
       // Setup Deliberation Accordion Toggle
