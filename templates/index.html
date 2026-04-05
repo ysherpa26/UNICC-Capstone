@@ -1,11 +1,387 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNICC AI Safety Lab</title>
+  <meta charset="UTF-8">
+  <title>UNICC AI Safety Lab</title>
+  <style> 
+    /* ===== ALL CSS HERE ===== */
+    
+    /* ===== DESIGN SYSTEM VARIABLES ===== */
+    :root {
+      --primary-blue: #0468B1;
+      --blue-hover: #034E82;
+      --dark-red: #D12800;
+      --amber: #E5A100;
+      --green: #1F8A3E;
+      --black: #1A1A1A;
+      --white: #FFFFFF;
+      --gray-100: #F7F7F7;
+      --gray-200: #EDEFF0;
+      --gray-400: #A9B1B7;
+      --gray-700: #55606B;
+    }
+
+    /* ===== BASE STYLES ===== */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--gray-100);
+      color: var(--black);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.9375rem; 
+      font-weight: 400;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ===== TYPOGRAPHY ===== */
+    h1, h2, h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Page title */
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+
+    /* Section headers */
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    /* Sub-headers */
+    h3 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    /* Section labels */
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Verdict word */
+    .verdict-word {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    /* Table cells */
+    td, th {
+      font-size: 0.875rem;
+      font-weight: 400;
+    }
+
+    /* Labels and captions */
+    .label, .caption {
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: var(--gray-700);
+    }
+
+    /* Small metadata */
+    .metadata {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--gray-400);
+    }
+
+    /* ===== LAYOUT ===== */
+    /* Container for spacing on the left and right sides of the page */
+    .page-padding {
+      padding: 0 2rem;
+    }
+
+    /* Centered content block with a maximum width */
+    .page-container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Standard card layout */
+    .card {
+      background-color: var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      padding: 1.5rem;
+    }
+
+    /* ===== REUSABLE COMPONENTS ===== */
+    button {
+      background-color: var(--primary-blue);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    button:hover {
+      background-color: var(--blue-hover);
+    }
+
+    input[type="text"], input[type="url"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 4px;
+      font-size: 0.9375rem;
+      font-family: inherit;
+    }
+    
+    input[type="url"]:focus {
+      outline: 2px solid var(--primary-blue);
+      outline-offset: -1px;
+    }
+
+    /* Basic styling for status badges */
+    .badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      color: var(--white);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      display: inline-block;
+    }
+    .badge-approve { background-color: var(--green); }
+    .badge-review { background-color: var(--amber); color: var(--black); }
+    .badge-reject { background-color: var(--dark-red); }
+
+    /* ===== STATE VISIBILITY ===== */
+    /* By default, sections are hidden */
+    .state-section {
+      display: none;
+    }
+    
+    /* When active, they show up */
+    .state-section.visible {
+      display: block;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      margin-bottom: 2rem;
+    }
+
+    .accent-bar {
+      width: 100%;
+      height: 4px;
+      background-color: var(--primary-blue);
+    }
+
+    .header-content {
+      padding-top: 2rem;
+    }
+
+    .header-subtitle {
+      font-size: 0.9375rem;
+      color: var(--gray-700);
+      margin: 0;
+    }
+
+    /* --- State 1: Form Styles --- */
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .form-hint {
+      margin-top: 0.5rem;
+      display: block;
+    }
+
+    /* --- State 2: Loading Styles --- */
+    .loading-wrapper {
+      text-align: center;
+      padding: 4rem 0;
+    }
+    
+    /* A spinning circle to show work is happening */
+    .spinner {
+      margin: 0 auto 1.5rem auto;
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--gray-200);
+      border-top: 4px solid var(--primary-blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* --- State 3: Results Styles --- */
+    .results-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .results-header-bar h2 {
+      margin: 0;
+    }
+
+    /* --- State 4: Error Styles --- */
+    .error-card {
+      border: 1px solid var(--dark-red);
+      border-left: 4px solid var(--dark-red);
+    }
+    
+    .error-card h2 {
+      color: var(--dark-red);
+    }
+  </style>
 </head>
 <body>
-    <h1>UNICC AI Safety Lab</h1>
+  <!-- ===== HEADER ===== -->
+  <header>
+    <div class="accent-bar"></div>
+    <div class="page-padding">
+      <div class="page-container header-content">
+        <h1>UNICC AI Safety Lab</h1>
+        <p class="header-subtitle">Multi-Agent Safety Evaluation Platform</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-padding">
+    <div class="page-container">
+      
+      <!-- ===== STATE 1: INPUT FORM ===== -->
+      <section id="state-input" class="state-section visible">
+        <div class="card">
+          <h2>Start Evaluation</h2>
+          
+          <form id="eval-form">
+            <div class="form-group">
+              <label for="url-input">Repository URL</label>
+              <input type="url" id="url-input" placeholder="https://github.com/organization/repository" required>
+              <span class="label form-hint">The system will analyze the source code and documentation of this repository across all safety frameworks.</span>
+            </div>
+            
+            <!-- WARNING: Changing the ID of this button will break the javascript that attaches the submit event. -->
+            <button type="submit" id="submit-btn">Run AI Evaluation</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ===== STATE 2: LOADING ===== -->
+      <section id="state-loading" class="state-section">
+        <div class="card loading-wrapper">
+          <div class="spinner"></div>
+          <h2>Evaluating Project</h2>
+          <p class="label">Please wait while the multi-agent system reads and evaluates the repository. This may take a few minutes.</p>
+        </div>
+      </section>
+
+      <!-- ===== STATE 3: RESULTS ===== -->
+      <section id="state-results" class="state-section">
+        <div class="results-header-bar">
+          <h2>Evaluation Results</h2>
+          <button id="new-eval-btn">Evaluate Another</button>
+        </div>
+        
+        <div class="card">
+          <span class="section-label">Overall Verdict</span>
+          <div class="verdict-word badge badge-review">REVIEW</div>
+          <p style="margin-top: 1rem; margin-bottom: 0;">Detailed evaluation results from the agents will appear here once the API is connected.</p>
+        </div>
+      </section>
+
+      <!-- ===== STATE 4: ERROR ===== -->
+      <section id="state-error" class="state-section">
+        <div class="card error-card">
+          <h2>System Error</h2>
+          <p>We encountered an issue while trying to fetch or evaluate the repository. Please make sure the URL is correct and try again.</p>
+          <button id="error-back-btn" style="margin-top: 1rem;">Go Back to Input</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script> 
+    /* ===== ALL JS HERE ===== */
+
+    // --- functionName: showState: switches which screen is visible ---
+    // Only one state div is visible at a time.
+    // stateId must be one of: 'state-input', 'state-loading', 'state-results', 'state-error'
+    function showState(stateId) {
+      // WARNING: if stateId isn't correctly spelled, the screen will be completely empty and users will be stuck. 
+      const states = ['state-input', 'state-loading', 'state-results', 'state-error'];
+      for (let i = 0; i < states.length; i++) {
+        const matchingStateHtmlElement = document.getElementById(states[i]);
+        if (matchingStateHtmlElement) {
+          if (states[i] === stateId) {
+            matchingStateHtmlElement.classList.add('visible');
+          } else {
+            matchingStateHtmlElement.classList.remove('visible');
+          }
+        }
+      }
+    }
+
+    // --- functionName: setupEventListeners: sets up form and button clicks ---
+    // Attaches initial click tracking so the buttons work right away.
+    function setupEventListeners() {
+      const formElement = document.getElementById('eval-form');
+      if (formElement) {
+        formElement.addEventListener('submit', function(event) {
+          event.preventDefault();
+          
+          // User submits form, show loading immediately
+          showState('state-loading');
+          
+          // WARNING: Here we pretend the evaluation takes 2.5 seconds to show what it looks like.
+          // You must delete this setTimeout when connecting to your Python API, or it will override real data.
+          setTimeout(function() {
+            showState('state-results');
+          }, 2500);
+        });
+      }
+
+      const evaluateAnotherButton = document.getElementById('new-eval-btn');
+      if (evaluateAnotherButton) {
+        evaluateAnotherButton.addEventListener('click', function() {
+          showState('state-input');
+        });
+      }
+
+      const backToStartButton = document.getElementById('error-back-btn');
+      if (backToStartButton) {
+        backToStartButton.addEventListener('click', function() {
+          showState('state-input');
+        });
+      }
+    }
+
+    // --- functionName: applicationStart: runs when the page is completely loaded ---
+    // This is the starting point for all our javascript logic.
+    document.addEventListener('DOMContentLoaded', function() {
+      setupEventListeners();
+    });
+  </script>
 </body>
 </html>
