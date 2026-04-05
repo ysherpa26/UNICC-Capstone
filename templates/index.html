@@ -290,20 +290,30 @@
     }
 
     /* --- State 2: Loading Styles --- */
-    .loading-wrapper {
+    .loading-card {
+      background-color: var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-radius: 8px;
+      padding: 3rem 1.5rem;
       text-align: center;
-      padding: 4rem 0;
+      margin-bottom: 1.5rem;
     }
     
     /* A spinning circle to show work is happening */
     .spinner {
       margin: 0 auto 1.5rem auto;
-      width: 40px;
-      height: 40px;
+      width: 48px;
+      height: 48px;
       border: 4px solid var(--gray-200);
       border-top: 4px solid var(--primary-blue);
       border-radius: 50%;
       animation: spin 1s linear infinite;
+    }
+
+    .loading-detail {
+      font-size: 0.8125rem;
+      color: var(--gray-700);
+      margin-top: 0.5rem;
     }
 
     @keyframes spin {
@@ -325,12 +335,37 @@
 
     /* --- State 4: Error Styles --- */
     .error-card {
+      background-color: var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-radius: 8px;
       border: 1px solid var(--dark-red);
       border-left: 4px solid var(--dark-red);
+      padding: 2rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
     }
     
-    .error-card h2 {
+    .error-icon {
+      font-size: 3rem;
       color: var(--dark-red);
+      margin-bottom: 1rem;
+      line-height: 1;
+    }
+
+    .error-title {
+      color: var(--dark-red);
+      margin-bottom: 0.5rem;
+    }
+
+    .error-message {
+      margin-bottom: 1.5rem;
+    }
+
+    .error-code {
+      font-size: 0.75rem;
+      color: var(--gray-400);
+      margin-bottom: 1.5rem;
+      font-family: monospace;
     }
   </style>
 </head>
@@ -376,19 +411,19 @@
                 <label for="manual-name">Agent Name</label>
                 <input type="text" id="manual-name" placeholder="e.g., VeriMedia">
                 <p class="helper-text">The name of the AI system being evaluated</p>
-                <div class="error-text" id="error-manual-name">Agent Name is required.</div>
+                <div class="error-text" id="error-manual-name">Agent Name is REQUIRED.</div>
               </div>
               <div class="form-group">
                 <label for="manual-type">Type</label>
                 <input type="text" id="manual-type" placeholder="e.g., content analysis tool">
-                <p class="helper-text">What kind of agent is this?</p>
-                <div class="error-text" id="error-manual-type">Type is required.</div>
+                <p class="helper-text">What kind of agent is this ? (2-3 words)</p>
+                <div class="error-text" id="error-manual-type">Type is REQUIRED.</div>
               </div>
               <div class="form-group">
                 <label for="manual-usecase">Use Case</label>
                 <textarea id="manual-usecase" rows="3" placeholder="e.g., Analyzes text, audio, and video for toxicity"></textarea>
                 <p class="helper-text">What does this agent do? Describe the main purpose in 1–2 sentences</p>
-                <div class="error-text" id="error-manual-usecase">Use Case is required.</div>
+                <div class="error-text" id="error-manual-usecase">Use Case is REQUIRED.</div>
               </div>
               <div class="form-group">
                 <label for="manual-deployment">Deployment</label>
@@ -429,10 +464,11 @@
 
       <!-- ===== STATE 2: LOADING ===== -->
       <section id="state-loading" class="state-section">
-        <div class="card loading-wrapper">
-          <div class="spinner"></div>
-          <h2>Evaluating Project</h2>
-          <p class="label">Please wait while the multi-agent system reads and evaluates the repository. This may take a few minutes.</p>
+        <div class="loading-card">
+          <div class="spinner" role="status" aria-label="Loading"></div>
+          <h2>Evaluating agent safety...</h2>
+          <p>This typically takes 60–90 seconds.</p>
+          <p class="loading-detail">Three independent safety experts are analyzing your submission from different regulatory perspectives.</p>
         </div>
       </section>
 
@@ -452,10 +488,12 @@
 
       <!-- ===== STATE 4: ERROR ===== -->
       <section id="state-error" class="state-section">
-        <div class="card error-card">
-          <h2>System Error</h2>
-          <p>We encountered an issue while trying to fetch or evaluate the repository. Please make sure the URL is correct and try again.</p>
-          <button id="error-back-btn" style="margin-top: 1rem;">Go Back to Input</button>
+        <div class="error-card">
+          <div class="error-icon">⚠</div>
+          <h2 class="error-title">Something went wrong</h2>
+          <p class="error-message" id="error-message-text"></p>
+          <p class="error-code" id="error-code-text"></p>
+          <button onclick="showState('state-input')">Try Again</button>
         </div>
       </section>
 
@@ -550,6 +588,23 @@
       return isValid;
     }
 
+    // --- functionName: handleError: Populates the error screen and displays it ---
+    function handleError(title, message, code) {
+      document.querySelector('.error-title').textContent = title;
+      document.getElementById('error-message-text').textContent = message;
+      
+      const elCode = document.getElementById('error-code-text');
+      if (code && code !== '') {
+        elCode.textContent = "Error Code: " + code;
+        elCode.style.display = 'block';
+      } else {
+        elCode.textContent = "";
+        elCode.style.display = 'none';
+      }
+      
+      showState('state-error');
+    }
+
     // --- functionName: setupEventListeners: sets up form and button clicks ---
     // Attaches initial click tracking so the buttons work right away.
     function setupEventListeners() {
@@ -604,15 +659,66 @@
           // Switch to loading state immediately
           showState('state-loading');
 
+          // Initialize a 120-second timeout to handle hung requests
+          const timeoutId = setTimeout(function() {
+            handleError(
+              "Request Timed Out", 
+              "The evaluation is taking longer than expected. The server may be busy — please try again."
+            );
+          }, 120000);
+
           // WARNING: Never use innerHTML to display API response data.
           // Always use textContent or createTextNode to prevent code injection.
-          // The only exception is static HTML structure you build yourself.
 
-          // WARNING: Here we pretend the evaluation takes 2.5 seconds to show what it looks like.
-          // You must delete this setTimeout when connecting to your Python API, or it will override real data.
-          setTimeout(function() {
+          // Send POST request
+          fetch('/api/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          })
+          .then(function(response) {
+            clearTimeout(timeoutId); // Clear timeout since we got a response
+            return response.json().catch(function() {
+               throw Error("Unexpected Response");
+            });
+          })
+          .then(function(data) {
+            if (data.error === true) {
+              handleError(
+                "Evaluation Failed", 
+                data.error_message || "Unknown error occurred.", 
+                data.error_code || ""
+              );
+              return;
+            }
+            
+            // Check if response shape looks roughly correct
+            if (!data || typeof data !== 'object') {
+              handleError(
+                "Unexpected Response", 
+                "The server returned a response that could not be understood. This may indicate a configuration issue."
+              );
+              return;
+            }
+
+            // Results would be rendered here, for now jump to placeholder state
             showState('state-results');
-          }, 2500);
+          })
+          .catch(function(err) {
+            clearTimeout(timeoutId); // Make sure timeout doesn't run if network fails 
+            
+            if (err.message === "Unexpected Response") {
+               handleError(
+                 "Unexpected Response", 
+                 "The server returned a response that could not be understood. This may indicate a configuration issue."
+               );
+            } else {
+               handleError(
+                 "Connection Error", 
+                 "Could not reach the evaluation server. Make sure the server is running at http://localhost:8000 and try again."
+               );
+            }
+          });
         });
       }
 
@@ -620,13 +726,6 @@
       if (evaluateAnotherButton) {
         evaluateAnotherButton.addEventListener('click', function() {
           if (formElement) formElement.reset(); // clear form inputs
-          showState('state-input');
-        });
-      }
-
-      const backToStartButton = document.getElementById('error-back-btn');
-      if (backToStartButton) {
-        backToStartButton.addEventListener('click', function() {
           showState('state-input');
         });
       }
