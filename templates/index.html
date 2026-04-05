@@ -422,6 +422,171 @@
       background-color: var(--gray-100);
       color: var(--primary-blue);
     }
+    
+    /* --- L2 Expert Panels --- */
+    .expert-container {
+      margin-top: 2.5rem;
+    }
+    
+    .expert-intro {
+      color: var(--gray-700);
+      margin-bottom: 1.5rem;
+      font-size: 0.9375rem;
+    }
+    
+    .panel {
+      background-color: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    
+    .panel-header {
+      padding: 1rem 1.5rem;
+      background-color: var(--white);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .panel-header:hover {
+      background-color: var(--gray-50);
+    }
+    
+    .panel-title {
+      font-weight: 700;
+      color: var(--black);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .panel-icon {
+      color: var(--gray-400);
+      font-size: 0.75rem;
+    }
+    
+    .panel-content {
+      padding: 0 1.5rem 1.5rem 1.5rem;
+      border-top: 1px solid var(--gray-200);
+      display: none;
+    }
+    
+    .panel.expanded .panel-content {
+      display: block;
+    }
+    
+    .panel-section-title {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--black);
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid var(--gray-200);
+      padding-bottom: 0.5rem;
+    }
+    
+    .cat-bar-wrapper {
+      margin-bottom: 1rem;
+    }
+    
+    .cat-bar-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.25rem;
+      font-size: 0.8125rem;
+    }
+    
+    .cat-name {
+      font-weight: 700;
+    }
+    
+    .cat-sev-label {
+      font-weight: 700;
+    }
+    
+    .cat-bar-track {
+      height: 8px;
+      background-color: var(--gray-200);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.25rem;
+    }
+    
+    .cat-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+    
+    .cat-stats {
+      font-size: 0.75rem;
+      color: var(--gray-700);
+    }
+    
+    .risk-card {
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .risk-category-pill {
+      display: inline-block;
+      background-color: var(--gray-200);
+      color: var(--gray-700);
+      padding: 0.125rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      align-self: flex-start;
+    }
+    
+    .risk-name {
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 0.5rem;
+    }
+
+    .risk-meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.8125rem;
+    }
+    
+    .risk-sev-track {
+      width: 40px;
+      height: 6px;
+      background-color: var(--gray-200);
+      border-radius: 3px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+    
+    .risk-sev-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .compliance-list {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+      margin: 0;
+      font-size: 0.875rem;
+    }
+    
+    .compliance-list li {
+      margin-bottom: 0.25rem;
+    }
 
     /* --- State 4: Error Styles --- */
     .error-card {
@@ -593,6 +758,11 @@
           <p id="res-synth-summary" style="margin-top: 1.5rem;"></p>
 
           <div id="res-disagreements-box" class="callout"></div>
+        </div>
+
+        <div id="res-l2-experts-container" class="expert-container" style="display: none;">
+          <p class="expert-intro">Each AI agent was evaluated independently by three safety experts, each applying a different regulatory framework. Expand any expert's report to see their detailed findings.</p>
+          <div id="res-l2-accordion"></div>
         </div>
 
         <div style="text-align: center; margin-top: 2rem;">
@@ -855,6 +1025,179 @@
         p.textContent = 'All three experts reached the same conclusion.';
         diagBox.appendChild(p);
       }
+      
+      // 6. L2 Expert Reports
+      renderL2Experts(data.agent_reports);
+    }
+
+    // --- functionName: renderL2Experts: Builds the accordion panels for expert data ---
+    function renderL2Experts(reports) {
+      const container = document.getElementById('res-l2-experts-container');
+      const accordion = document.getElementById('res-l2-accordion');
+      accordion.innerHTML = '';
+      
+      if (!reports || reports.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      
+      container.style.display = 'block';
+      
+      const frameworkDisplay = {
+        'eu_ai_act': 'EU AI Act',
+        'iso_iec': 'ISO/IEC Standards',
+        'nist_ai_rmf': 'NIST AI Risk Management Framework',
+        'ieee': 'IEEE Standards',
+        'unesco': 'UNESCO AI Ethics'
+      };
+
+      reports.forEach((report, index) => {
+        let agentName = `Expert ${index + 1}: General Analysis`;
+        const gen = (report.report_meta && report.report_meta.generator) || `agent_${index + 1}`;
+        if (gen.includes('eu_ai_act') || index === 0) agentName = `Expert ${index + 1}: EU AI Act Analysis`;
+        else if (gen.includes('owasp') || index === 1) agentName = `Expert ${index + 1}: OWASP Security Analysis`;
+        else if (gen.includes('unesco') || index === 2) agentName = `Expert ${index + 1}: UNESCO Ethics Analysis`;
+
+        const panel = document.createElement('div');
+        panel.className = 'panel';
+        
+        let rec = report.final_recommendation || 'review';
+        let badgeClass = 'badge-review';
+        let badgeText = 'REVIEW';
+        if (rec === 'approve') { badgeClass = 'badge-approve'; badgeText = 'APPROVE'; }
+        else if (rec === 'hold_and_fix') { badgeClass = 'badge-reject'; badgeText = 'REJECT'; }
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'panel-header';
+        header.innerHTML = `
+          <div class="panel-title">
+            <span>${agentName}</span>
+            <span class="badge ${badgeClass}" style="font-size: 0.6875rem; padding: 0.125rem 0.5rem;">${badgeText}</span>
+          </div>
+          <div class="panel-icon">▶</div>
+        `;
+        
+        // Content
+        const content = document.createElement('div');
+        content.className = 'panel-content';
+
+        // Executive Summary
+        if (report.executive_summary) {
+          const p = document.createElement('p');
+          p.style.marginTop = '1.5rem';
+          p.textContent = report.executive_summary;
+          content.appendChild(p);
+        }
+
+        // Risk Overview
+        if (report.category_summary) {
+          const title = document.createElement('div');
+          title.className = 'panel-section-title';
+          title.textContent = 'Risk Overview';
+          content.appendChild(title);
+
+          const cats = ['Technical', 'Ethical', 'Legal', 'Societal'];
+          cats.forEach(c => {
+            const sum = report.category_summary[c];
+            if (!sum) return;
+            
+            const sev = sum.avg_severity || 0;
+            let color = 'var(--green)';
+            let label = 'Low Risk';
+            if (sev > 0.6) { color = 'var(--dark-red)'; label = 'High Risk'; }
+            else if (sev > 0.3) { color = 'var(--amber)'; label = 'Medium Risk'; }
+            
+            const w = document.createElement('div');
+            w.className = 'cat-bar-wrapper';
+            w.innerHTML = `
+              <div class="cat-bar-header">
+                <span class="cat-name">${c}</span>
+                <span class="cat-sev-label" style="color: ${color}">${label} (${sev.toFixed(1)})</span>
+              </div>
+              <div class="cat-bar-track">
+                <div class="cat-bar-fill" style="width: ${sev * 100}%; background-color: ${color};"></div>
+              </div>
+              <div class="cat-stats">Pass: ${sum.pass} | Fail: ${sum.fail} | Needs Attention: ${sum.needs_attention}</div>
+            `;
+            content.appendChild(w);
+          });
+        }
+
+        // Top Risks
+        if (report.top_risks && report.top_risks.length > 0) {
+          const title = document.createElement('div');
+          title.className = 'panel-section-title';
+          title.textContent = 'Key Risks Found';
+          content.appendChild(title);
+
+          report.top_risks.forEach(risk => {
+            const sev = risk.severity || 0;
+            let fillWidth = (sev / 5) * 100; // Assume 0-5 scale typical 
+            if (sev > 0 && sev <= 1) fillWidth = sev * 100; // if 0-1 scale used accidentally
+            
+            let color = 'var(--green)';
+            let label = 'Low';
+            if (sev >= 4 || (sev > 0.6 && sev <= 1)) { color = 'var(--dark-red)'; label = 'High'; }
+            else if (sev >= 2 || (sev > 0.3 && sev <= 1)) { color = 'var(--amber)'; label = 'Medium'; }
+
+            let rClass = 'badge-review';
+            let rText = (risk.judgement || 'needs_attention').toUpperCase().replace('_', ' ');
+            if (rText === 'PASS') rClass = 'badge-approve';
+            if (rText === 'FAIL') rClass = 'badge-reject';
+
+            const card = document.createElement('div');
+            card.className = 'risk-card';
+            card.innerHTML = `
+              <div class="risk-card-header">
+                <span class="risk-category-pill">${risk.category || 'General'}</span>
+                <span class="risk-name">${risk.name}</span>
+              </div>
+              <div class="risk-meta">
+                <div class="risk-sev">
+                  <span>Severity:</span>
+                  <div class="risk-sev-track"><div class="risk-sev-fill" style="width: ${fillWidth}%; background-color: ${color};"></div></div>
+                  <span>${label}</span>
+                </div>
+                <div>Result: <span class="badge ${rClass}" style="font-size: 0.625rem; padding: 0.125rem 0.375rem;">${rText}</span></div>
+              </div>
+            `;
+            content.appendChild(card);
+          });
+        }
+
+        // Compliance Mapping
+        if (report.compliance_mapping) {
+          const title = document.createElement('div');
+          title.className = 'panel-section-title';
+          title.textContent = 'Regulatory Standards Referenced';
+          content.appendChild(title);
+
+          const list = document.createElement('ul');
+          list.className = 'compliance-list';
+          
+          for (const [key, mappingArray] of Object.entries(report.compliance_mapping)) {
+            const li = document.createElement('li');
+            const fwName = frameworkDisplay[key] || key;
+            if (!mappingArray || mappingArray.length === 0) {
+               li.innerHTML = `<strong>${fwName}:</strong> No specific references identified`;
+            } else {
+               li.innerHTML = `<strong>${fwName}:</strong> ${mappingArray.join(', ')}`;
+            }
+            list.appendChild(li);
+          }
+          content.appendChild(list);
+        }
+
+        header.addEventListener('click', () => {
+          const isExpanded = panel.classList.toggle('expanded');
+          panel.querySelector('.panel-icon').textContent = isExpanded ? '▼' : '▶';
+        });
+
+        panel.appendChild(header);
+        panel.appendChild(content);
+        accordion.appendChild(panel);
+      });
     }
 
     // --- functionName: handleError: Populates the error screen and displays it ---
@@ -935,6 +1278,25 @@
                   confidence: 85,
                   disagreements: ["OWASP flagged prompt injection as high probability, whereas EU AI Act classified it as a documentation failure.", "UNESCO diverged on severity of dialect transcription bias, marking it critical while others saw it as moderate."]
                 }, MOCK_RESPONSE);
+                
+                renderedData.agent_reports = [
+                  Object.assign({}, MOCK_RESPONSE, {
+                    report_meta: { generator: 'eu_ai_act' },
+                    final_recommendation: 'review',
+                    executive_summary: "The agent shows promising capability but lacks comprehensive human oversight and logging as mandated by the EU AI Act."
+                  }),
+                  Object.assign({}, MOCK_RESPONSE, {
+                    report_meta: { generator: 'owasp' },
+                    final_recommendation: 'hold_and_fix',
+                    executive_summary: "Severe vulnerabilities related to prompt injection and insufficient input validation detected.",
+                    top_risks: MOCK_RESPONSE.top_risks.filter(function(r) { return r.category === 'Technical'; })
+                  }),
+                  Object.assign({}, MOCK_RESPONSE, {
+                    report_meta: { generator: 'unesco' },
+                    final_recommendation: 'review',
+                    executive_summary: "The model demonstrates ethical risks related to representation in speech training datasets, posing slight non-discrimination risks."
+                  })
+                ];
                 
                 renderResults(renderedData);
                 showState('state-results');
