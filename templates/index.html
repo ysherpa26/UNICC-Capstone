@@ -588,6 +588,133 @@
       margin-bottom: 0.25rem;
     }
 
+    /* --- L3 Styles --- */
+    .sub-panel-header {
+      padding: 0.75rem 1rem;
+      background-color: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      margin-top: 1rem;
+    }
+    
+    .sub-panel-header:hover {
+      background-color: var(--gray-100);
+    }
+    
+    .sub-panel-title {
+      font-weight: 700;
+      color: var(--black);
+      font-size: 0.875rem;
+    }
+    
+    .sub-panel-content {
+      padding: 1rem;
+      border: 1px solid var(--gray-200);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      display: none;
+    }
+    
+    .sub-panel.expanded .sub-panel-content {
+      display: block;
+    }
+    
+    .action-item {
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px dashed var(--gray-200);
+      font-size: 0.875rem;
+    }
+    
+    .action-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    
+    .action-row {
+      margin-bottom: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: baseline;
+    }
+    
+    .action-label {
+      font-weight: 700;
+      color: var(--gray-700);
+      min-width: 60px;
+    }
+    
+    .meta-block {
+      background-color: var(--gray-100);
+      padding: 1rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: var(--gray-400);
+      margin-top: 2rem;
+      line-height: 1.5;
+    }
+    
+    .meta-block span {
+      display: block;
+    }
+    
+    /* --- Deliberation Log --- */
+    .deliberation-container {
+      margin-top: 2rem;
+      display: none;
+    }
+    
+    .deliberation-header {
+      padding: 1rem 1.5rem;
+      background-color: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .deliberation-header:hover {
+      background-color: var(--gray-50);
+    }
+    
+    .deliberation-content {
+      border: 1px solid var(--gray-200);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      padding: 1.5rem;
+      background-color: var(--white);
+      display: none;
+    }
+    
+    .deliberation-container.expanded .deliberation-content {
+      display: block;
+    }
+    .deliberation-container.expanded .deliberation-header {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    
+    .delib-step {
+      border-left: 4px solid var(--primary-blue);
+      background-color: var(--gray-100);
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+    }
+    
+    .delib-step:last-child {
+      margin-bottom: 0;
+    }
+
     /* --- State 4: Error Styles --- */
     .error-card {
       background-color: var(--white);
@@ -763,6 +890,16 @@
         <div id="res-l2-experts-container" class="expert-container" style="display: none;">
           <p class="expert-intro">Each AI agent was evaluated independently by three safety experts, each applying a different regulatory framework. Expand any expert's report to see their detailed findings.</p>
           <div id="res-l2-accordion"></div>
+        </div>
+
+        <div id="res-l3-deliberation-container" class="deliberation-container">
+          <div class="deliberation-header" id="delib-header-btn">
+            <div class="panel-title">
+              <span>How the Final Verdict Was Reached</span>
+            </div>
+            <div class="panel-icon" id="delib-icon">▶</div>
+          </div>
+          <div class="deliberation-content" id="res-deliberation-log"></div>
         </div>
 
         <div style="text-align: center; margin-top: 2rem;">
@@ -1028,6 +1165,24 @@
       
       // 6. L2 Expert Reports
       renderL2Experts(data.agent_reports);
+
+      // 7. Deliberation Log
+      const delibContainer = document.getElementById('res-l3-deliberation-container');
+      const delibContent = document.getElementById('res-deliberation-log');
+      delibContent.innerHTML = '';
+      
+      const dLog = data.deliberation_log || [];
+      if (dLog.length > 0) {
+        delibContainer.style.display = 'block';
+        dLog.forEach((step, i) => {
+          const div = document.createElement('div');
+          div.className = 'delib-step';
+          div.innerHTML = `<strong>${i + 1}.</strong> ${step}`;
+          delibContent.appendChild(div);
+        });
+      } else {
+        delibContainer.style.display = 'none';
+      }
     }
 
     // --- functionName: renderL2Experts: Builds the accordion panels for expert data ---
@@ -1189,6 +1344,83 @@
           content.appendChild(list);
         }
 
+        // Recommended Actions
+        if (report.gaps_and_actions && report.gaps_and_actions.length > 0) {
+          const subPanel = document.createElement('div');
+          subPanel.className = 'sub-panel';
+          
+          const sHeader = document.createElement('div');
+          sHeader.className = 'sub-panel-header';
+          sHeader.innerHTML = `
+            <div class="sub-panel-title">Recommended Actions (${report.gaps_and_actions.length} items)</div>
+            <div class="panel-icon">▶</div>
+          `;
+          
+          const sContent = document.createElement('div');
+          sContent.className = 'sub-panel-content';
+          
+          report.gaps_and_actions.forEach(act => {
+            const getBadgeClass = (str) => {
+              const s = (str || '').toLowerCase();
+              if (s === 'low') return 'badge-approve';
+              if (s === 'medium') return 'badge-review';
+              if (s === 'high' || s === 'critical') return 'badge-reject';
+              return 'badge-review';
+            };
+            
+            const iClass = getBadgeClass(act.impact);
+            const pClass = getBadgeClass(act.priority);
+            
+            const div = document.createElement('div');
+            div.className = 'action-item';
+            div.innerHTML = `
+              <div class="action-row"><div class="action-label">Gap:</div><div>${act.gap}</div></div>
+              <div class="action-row">
+                <div class="action-label">Impact:</div><div><span class="badge ${iClass}" style="font-size:0.625rem;">${act.impact || 'Unknown'}</span></div>
+                <div class="action-label" style="margin-left: 1rem;">Priority:</div><div><span class="badge ${pClass}" style="font-size:0.625rem;">${act.priority || 'Unknown'}</span></div>
+              </div>
+              <div class="action-row"><div class="action-label">Action:</div><div>${act.recommended_action}</div></div>
+              <div class="action-row"><div class="action-label">Timeline:</div><div>approximately ${act.eta_days || '-'} days</div></div>
+            `;
+            sContent.appendChild(div);
+          });
+          
+          sHeader.addEventListener('click', () => {
+            const isExpanded = subPanel.classList.toggle('expanded');
+            sHeader.querySelector('.panel-icon').textContent = isExpanded ? '▼' : '▶';
+          });
+          
+          subPanel.appendChild(sHeader);
+          subPanel.appendChild(sContent);
+          content.appendChild(subPanel);
+        }
+        
+        // Report Metadata
+        if (report.report_meta) {
+           const meta = document.createElement('div');
+           meta.className = 'meta-block';
+           
+           const rId = report.report_meta.run_id || 'unknown-run';
+           const tsRaw = report.report_meta.generated_at;
+           let tsFormat = 'Unknown Date';
+           if (tsRaw) {
+             try { 
+               const d = new Date(tsRaw);
+               const md = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+               const tm = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+               tsFormat = `${md} at ${tm}`;
+             } catch(e) { tsFormat = tsRaw; }
+           }
+           
+           meta.innerHTML = `
+             <span><strong>Run ID:</strong> ${rId}</span>
+             <span><strong>Generated:</strong> ${tsFormat}</span>
+             <span><strong>Framework version:</strong> ${report.report_meta.framework_version || '1.0.0'}</span>
+             <span><strong>Generator ID:</strong> ${gen}</span>
+           `;
+           content.appendChild(meta);
+        }
+
         header.addEventListener('click', () => {
           const isExpanded = panel.classList.toggle('expanded');
           panel.querySelector('.panel-icon').textContent = isExpanded ? '▼' : '▶';
@@ -1273,28 +1505,43 @@
 
           if (typeof MOCK_MODE !== 'undefined' && MOCK_MODE) {
              setTimeout(function() {
+                // Mock out L3 arrays
+                const mockGaps = [
+                  { gap: "No explicit system prompt boundaries", impact: "High", priority: "High", recommended_action: "Implement strict system prompt guardrails", eta_days: 14 },
+                  { gap: "Logging does not capture failed interactions", impact: "Medium", priority: "Medium", recommended_action: "Update logging schema to include negative state captures", eta_days: 7 }
+                ];
+
                 // Ensure the mock has the fields expected by the renderer
                 const renderedData = Object.assign({
                   confidence: 85,
-                  disagreements: ["OWASP flagged prompt injection as high probability, whereas EU AI Act classified it as a documentation failure.", "UNESCO diverged on severity of dialect transcription bias, marking it critical while others saw it as moderate."]
+                  disagreements: ["OWASP flagged prompt injection as high probability, whereas EU AI Act classified it as a documentation failure.", "UNESCO diverged on severity of dialect transcription bias, marking it critical while others saw it as moderate."],
+                  deliberation_log: [
+                    "Synthesized initial findings from all three regulatory assessments.",
+                    "Identified conflicting severity for prompt injection; weighted OWASP Technical findings higher due to the agent's deployment nature.",
+                    "Calculated overall confidence score based on mapping divergences in the Societal risk framework.",
+                    "Generated final unified recommendation of 'REVIEW' pending essential fixes."
+                  ]
                 }, MOCK_RESPONSE);
                 
                 renderedData.agent_reports = [
                   Object.assign({}, MOCK_RESPONSE, {
-                    report_meta: { generator: 'eu_ai_act' },
+                    report_meta: { generator: 'eu_ai_act', run_id: 'rnd_8a9a23', generated_at: '2026-04-05T14:35:00Z', framework_version: '2.1' },
                     final_recommendation: 'review',
-                    executive_summary: "The agent shows promising capability but lacks comprehensive human oversight and logging as mandated by the EU AI Act."
+                    executive_summary: "The agent shows promising capability but lacks comprehensive human oversight and logging as mandated by the EU AI Act.",
+                    gaps_and_actions: mockGaps
                   }),
                   Object.assign({}, MOCK_RESPONSE, {
-                    report_meta: { generator: 'owasp' },
+                    report_meta: { generator: 'owasp', run_id: 'rnd_2b4f99', generated_at: '2026-04-05T14:35:01Z', framework_version: '4.0' },
                     final_recommendation: 'hold_and_fix',
                     executive_summary: "Severe vulnerabilities related to prompt injection and insufficient input validation detected.",
-                    top_risks: MOCK_RESPONSE.top_risks.filter(function(r) { return r.category === 'Technical'; })
+                    top_risks: MOCK_RESPONSE.top_risks ? MOCK_RESPONSE.top_risks.filter(function(r) { return r.category === 'Technical'; }) : [],
+                    gaps_and_actions: mockGaps
                   }),
                   Object.assign({}, MOCK_RESPONSE, {
-                    report_meta: { generator: 'unesco' },
+                    report_meta: { generator: 'unesco', run_id: 'rnd_1e3d77', generated_at: '2026-04-05T14:35:02Z', framework_version: '1.2' },
                     final_recommendation: 'review',
-                    executive_summary: "The model demonstrates ethical risks related to representation in speech training datasets, posing slight non-discrimination risks."
+                    executive_summary: "The model demonstrates ethical risks related to representation in speech training datasets, posing slight non-discrimination risks.",
+                    gaps_and_actions: mockGaps
                   })
                 ];
                 
@@ -1365,6 +1612,16 @@
                );
             }
           });
+        });
+      }
+
+      // Setup Deliberation Accordion Toggle
+      const delibHeaderBtn = document.getElementById('delib-header-btn');
+      if (delibHeaderBtn) {
+        delibHeaderBtn.addEventListener('click', function() {
+          const container = document.getElementById('res-l3-deliberation-container');
+          const isExpanded = container.classList.toggle('expanded');
+          document.getElementById('delib-icon').textContent = isExpanded ? '▼' : '▶';
         });
       }
 
