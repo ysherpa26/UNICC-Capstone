@@ -503,6 +503,89 @@
   <script> 
     /* ===== ALL JS HERE ===== */
 
+    // --- MOCK DATA ---
+    const MOCK_MODE = true;
+    
+    const MOCK_RESPONSE = {
+      "report_meta": {
+        "run_id": "eval_18a7b9fc2",
+        "generated_at": new Date().toISOString(),
+        "framework_version": "v1.2.0",
+        "protocol_version": "2.0",
+        "generator": "UNICC_multi_agent_judge"
+      },
+      "model_summary": {
+        "name": "VeriMedia",
+        "type": "Content Analysis Tool",
+        "use_case": "Analyzes text, audio, and video for toxicity, bias, and misinformation.",
+        "deployment": "Hybrid",
+        "auth": "OAuth2 + API Key",
+        "finetune_data": "UN News Corpus, Public domain media",
+        "logging": "Enabled"
+      },
+      "category_summary": {
+        "Technical":  { "avg_severity": 3.2, "pass": 15, "fail": 2, "needs_attention": 4 },
+        "Ethical":    { "avg_severity": 4.1, "pass": 10, "fail": 1, "needs_attention": 5 },
+        "Legal":      { "avg_severity": 2.5, "pass": 18, "fail": 0, "needs_attention": 2 },
+        "Societal":   { "avg_severity": 3.8, "pass": 12, "fail": 1, "needs_attention": 3 }
+      },
+      "top_risks": [
+        {
+          "risk_id": "risk_owasp_11",
+          "name": "Prompt Injection Vulnerability",
+          "category": "Technical",
+          "severity": 4,
+          "judgement": "fail"
+        },
+        {
+          "risk_id": "risk_unesco_04",
+          "name": "Implicit Bias in Multilingual Audio Parsing",
+          "category": "Ethical",
+          "severity": 4,
+          "judgement": "fail"
+        },
+        {
+          "risk_id": "risk_eu_act_22",
+          "name": "Lack of Real-time Human Oversight Mechanism",
+          "category": "Legal",
+          "severity": 3,
+          "judgement": "needs_attention"
+        }
+      ],
+      "compliance_mapping": {
+        "eu_ai_act": ["Article 14: Human oversight missing for automated flagging"],
+        "iso_iec": ["ISO/IEC 23894: Risk assessment missing adversarial testing"],
+        "nist_ai_rmf": ["MAP 1.5: Interoperability boundaries not fully defined"],
+        "ieee": ["IEEE 7000: Transparency measures lack clear end-user documentation"],
+        "unesco": ["Principle 4: Non-discrimination not provably guaranteed for minority dialects"]
+      },
+      "gaps_and_actions": [
+        {
+          "gap": "System lacks robust input sanitization against advanced adversarial prompts.",
+          "impact": "High",
+          "recommended_action": "Implement strict input validation layers and leverage an LLM proxy firewall.",
+          "priority": "high",
+          "eta_days": 14
+        },
+        {
+          "gap": "Bias identified in transcription of specific regional dialects.",
+          "impact": "Medium",
+          "recommended_action": "Finetune speech-to-text models on underrepresented voice datasets.",
+          "priority": "medium",
+          "eta_days": 30
+        },
+        {
+          "gap": "Human-in-the-loop override capability is not exposed through the main dashboard API.",
+          "impact": "High",
+          "recommended_action": "Introduce a mandatory review queue API endpoint for high-confidence toxicity flags.",
+          "priority": "high",
+          "eta_days": 7
+        }
+      ],
+      "final_recommendation": "hold_and_fix",
+      "executive_summary": "VeriMedia demonstrates strong capabilities in general content analysis but fails critical requirements for prompt injection resilience (OWASP) and non-discrimination in dialects (UNESCO). The EU AI Act agent also flagged a missing human-in-the-loop mechanism. The tool should be held from production until input sanitization and bias mitigation steps are completed."
+    };
+
     // --- functionName: showState: switches which screen is visible ---
     // Only one state div is visible at a time.
     // stateId must be one of: 'state-input', 'state-loading', 'state-results', 'state-error'
@@ -735,6 +818,8 @@
     // This is the starting point for all our javascript logic.
     document.addEventListener('DOMContentLoaded', function() {
       setupEventListeners();
+      // Temporary test to preview loading
+      //showState('state-error');
     });
   </script>
 </body>
