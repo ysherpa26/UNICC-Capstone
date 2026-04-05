@@ -333,6 +333,96 @@
       margin: 0;
     }
 
+    .submitted-profile {
+      margin-bottom: 1.5rem;
+      font-size: 0.9375rem;
+    }
+    
+    .submitted-profile .label {
+      font-weight: 700;
+      color: var(--gray-700);
+      margin-right: 0.25rem;
+    }
+    
+    .submitted-profile .value {
+      color: var(--black);
+    }
+    
+    .badge-l1 {
+      padding: 0.375rem 1rem;
+    }
+    
+    .confidence-wrapper {
+      margin-top: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .confidence-label {
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+    
+    .confidence-track {
+      height: 6px;
+      background-color: var(--gray-200);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 0.25rem;
+    }
+    
+    .confidence-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+    
+    .confidence-desc {
+      font-size: 0.75rem;
+      color: var(--gray-700);
+    }
+    
+    .callout {
+      padding: 1rem;
+      border-radius: 4px;
+      margin-top: 1.5rem;
+    }
+    
+    .callout-amber {
+      border-left: 4px solid var(--amber);
+      background-color: #FFF8E1;
+    }
+    
+    .callout-green {
+      border-left: 4px solid var(--green);
+      background-color: #F0F9F2;
+    }
+    
+    .callout h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      font-size: 0.9375rem;
+    }
+    
+    .callout p {
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+    }
+    
+    .callout p:last-child {
+      margin-bottom: 0;
+    }
+    
+    .btn-secondary {
+      background-color: var(--white);
+      color: var(--primary-blue);
+      border: 1px solid var(--primary-blue);
+    }
+    
+    .btn-secondary:hover {
+      background-color: var(--gray-100);
+      color: var(--primary-blue);
+    }
+
     /* --- State 4: Error Styles --- */
     .error-card {
       background-color: var(--white);
@@ -476,13 +566,37 @@
       <section id="state-results" class="state-section">
         <div class="results-header-bar">
           <h2>Evaluation Results</h2>
-          <button id="new-eval-btn">Evaluate Another</button>
+        </div>
+
+        <div class="submitted-profile">
+          <span class="label">Evaluated Agent:</span>
+          <span class="value" id="res-agent-name" style="font-weight: 700;"></span> — 
+          <span class="value" id="res-agent-type"></span>
         </div>
         
         <div class="card">
           <span class="section-label">Overall Verdict</span>
-          <div class="verdict-word badge badge-review">REVIEW</div>
-          <p style="margin-top: 1rem; margin-bottom: 0;">Detailed evaluation results from the agents will appear here once the API is connected.</p>
+          
+          <div style="margin-bottom: 0.5rem;">
+            <div id="res-verdict-badge" class="badge badge-l1"></div>
+          </div>
+          <p id="res-verdict-desc" class="label"></p>
+
+          <div class="confidence-wrapper">
+            <span class="confidence-label" id="res-confidence-text"></span>
+            <div class="confidence-track">
+              <div id="res-confidence-fill" class="confidence-fill"></div>
+            </div>
+            <span class="confidence-desc">How strongly the three experts agreed on this verdict</span>
+          </div>
+
+          <p id="res-synth-summary" style="margin-top: 1.5rem;"></p>
+
+          <div id="res-disagreements-box" class="callout"></div>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+          <button id="btn-restart" class="btn-secondary">Evaluate Another Agent</button>
         </div>
       </section>
 
@@ -671,6 +785,78 @@
       return isValid;
     }
 
+    // --- functionName: renderResults: Renders the API response into State 3 ---
+    function renderResults(data) {
+      // 1. Submitted profile
+      const modelSum = data.model_summary || {};
+      document.getElementById('res-agent-name').textContent = modelSum.name || "Unknown Agent";
+      document.getElementById('res-agent-type').textContent = modelSum.type || "Unknown Type";
+      
+      // 2. Verdict Badge and Description
+      const badgeEl = document.getElementById('res-verdict-badge');
+      const descEl = document.getElementById('res-verdict-desc');
+      const v = data.final_recommendation || "review";
+      
+      badgeEl.className = 'badge badge-l1'; // reset
+      
+      if (v === 'approve') {
+        badgeEl.textContent = 'APPROVE';
+        badgeEl.classList.add('badge-approve');
+        descEl.textContent = 'This agent meets safety requirements';
+      } else if (v === 'hold_and_fix') {
+        badgeEl.textContent = 'REJECT';
+        badgeEl.classList.add('badge-reject');
+        descEl.textContent = 'This agent has significant safety concerns and should not be deployed as-is';
+      } else {
+        badgeEl.textContent = 'REVIEW';
+        badgeEl.classList.add('badge-review');
+        descEl.textContent = 'This agent has issues that need to be addressed before deployment';
+      }
+      
+      // 3. Confidence
+      const confValue = (data.confidence !== undefined) ? data.confidence : 85;
+      const confText = document.getElementById('res-confidence-text');
+      const confFill = document.getElementById('res-confidence-fill');
+      
+      confText.textContent = `Confidence %: ${confValue}%`;
+      confFill.style.width = `${confValue}%`;
+      
+      if (confValue >= 80) {
+        confFill.style.backgroundColor = 'var(--green)';
+      } else if (confValue >= 50) {
+        confFill.style.backgroundColor = 'var(--amber)';
+      } else {
+        confFill.style.backgroundColor = 'var(--dark-red)';
+      }
+      
+      // 4. Synthesized Summary
+      const synthText = data.synthesized_summary || data.executive_summary || "No executive summary provided.";
+      document.getElementById('res-synth-summary').textContent = synthText;
+      
+      // 5. Disagreements
+      const diagBox = document.getElementById('res-disagreements-box');
+      diagBox.innerHTML = ''; 
+      
+      const disagreements = data.disagreements || [];
+      if (disagreements.length > 0) {
+        diagBox.className = 'callout callout-amber';
+        const h3 = document.createElement('h3');
+        h3.textContent = 'Where the Experts Disagreed';
+        diagBox.appendChild(h3);
+        
+        disagreements.forEach(str => {
+          const p = document.createElement('p');
+          p.textContent = str;
+          diagBox.appendChild(p);
+        });
+      } else {
+        diagBox.className = 'callout callout-green';
+        const p = document.createElement('p');
+        p.textContent = 'All three experts reached the same conclusion.';
+        diagBox.appendChild(p);
+      }
+    }
+
     // --- functionName: handleError: Populates the error screen and displays it ---
     function handleError(title, message, code) {
       document.querySelector('.error-title').textContent = title;
@@ -742,6 +928,20 @@
           // Switch to loading state immediately
           showState('state-loading');
 
+          if (typeof MOCK_MODE !== 'undefined' && MOCK_MODE) {
+             setTimeout(function() {
+                // Ensure the mock has the fields expected by the renderer
+                const renderedData = Object.assign({
+                  confidence: 85,
+                  disagreements: ["OWASP flagged prompt injection as high probability, whereas EU AI Act classified it as a documentation failure.", "UNESCO diverged on severity of dialect transcription bias, marking it critical while others saw it as moderate."]
+                }, MOCK_RESPONSE);
+                
+                renderResults(renderedData);
+                showState('state-results');
+             }, 1500);
+             return; // Short-circuit actual fetch
+          }
+
           // Initialize a 120-second timeout to handle hung requests
           const timeoutId = setTimeout(function() {
             handleError(
@@ -784,7 +984,8 @@
               return;
             }
 
-            // Results would be rendered here, for now jump to placeholder state
+            // Call our new render function
+            renderResults(data);
             showState('state-results');
           })
           .catch(function(err) {
@@ -805,10 +1006,16 @@
         });
       }
 
-      const evaluateAnotherButton = document.getElementById('new-eval-btn');
-      if (evaluateAnotherButton) {
-        evaluateAnotherButton.addEventListener('click', function() {
+      const restartButton = document.getElementById('btn-restart');
+      if (restartButton) {
+        restartButton.addEventListener('click', function() {
           if (formElement) formElement.reset(); // clear form inputs
+          // Clear DOM fields
+          document.getElementById('res-agent-name').textContent = '';
+          document.getElementById('res-agent-type').textContent = '';
+          document.getElementById('res-synth-summary').textContent = '';
+          document.getElementById('res-disagreements-box').innerHTML = '';
+          
           showState('state-input');
         });
       }
