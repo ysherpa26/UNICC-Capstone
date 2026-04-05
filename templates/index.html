@@ -1,11 +1,1681 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNICC AI Safety Lab</title>
+  <meta charset="UTF-8">
+  <title>UNICC AI Safety Lab</title>
+  <style> 
+    /* ===== ALL CSS HERE ===== */
+    
+    /* ===== DESIGN SYSTEM VARIABLES ===== */
+    :root {
+      --primary-blue: #0468B1;
+      --blue-hover: #034E82;
+      --dark-red: #D12800;
+      --amber: #E5A100;
+      --green: #1F8A3E;
+      --black: #1A1A1A;
+      --white: #FFFFFF;
+      --gray-100: #F7F7F7;
+      --gray-200: #EDEFF0;
+      --gray-400: #A9B1B7;
+      --gray-700: #55606B;
+    }
+
+    /* ===== BASE STYLES ===== */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--gray-100);
+      color: var(--black);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.9375rem; 
+      font-weight: 400;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ===== TYPOGRAPHY ===== */
+    h1, h2, h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Page title */
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+
+    /* Section headers */
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    /* Sub-headers */
+    h3 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    /* Section labels */
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Verdict word */
+    .verdict-word {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    /* Table cells */
+    td, th {
+      font-size: 0.875rem;
+      font-weight: 400;
+    }
+
+    /* Labels and captions */
+    .label, .caption {
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: var(--gray-700);
+    }
+
+    /* Small metadata */
+    .metadata {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--gray-400);
+    }
+
+    /* ===== LAYOUT ===== */
+    /* Container for spacing on the left and right sides of the page */
+    .page-padding {
+      padding: 0 2rem;
+    }
+
+    /* Centered content block with a maximum width */
+    .page-container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Standard card layout */
+    .card {
+      background-color: var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      padding: 1.5rem;
+    }
+
+    /* ===== REUSABLE COMPONENTS ===== */
+    button {
+      background-color: var(--primary-blue);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    button:hover {
+      background-color: var(--blue-hover);
+    }
+
+    input[type="text"], input[type="url"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 4px;
+      font-size: 0.9375rem;
+      font-family: inherit;
+    }
+    
+    input[type="url"]:focus {
+      outline: 2px solid var(--primary-blue);
+      outline-offset: -1px;
+    }
+
+    /* Basic styling for status badges */
+    .badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      color: var(--white);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      display: inline-block;
+    }
+    .badge-approve { background-color: var(--green); }
+    .badge-review { background-color: var(--amber); color: var(--black); }
+    .badge-reject { background-color: var(--dark-red); }
+
+    /* ===== STATE VISIBILITY ===== */
+    /* By default, sections are hidden */
+    .state-section {
+      display: none;
+    }
+    
+    /* When active, they show up */
+    .state-section.visible {
+      display: block;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      margin-bottom: 2rem;
+    }
+
+    .accent-bar {
+      width: 100%;
+      height: 4px;
+      background-color: var(--primary-blue);
+    }
+
+    .header-content {
+      padding-top: 2rem;
+    }
+
+    .header-subtitle {
+      font-size: 0.9375rem;
+      color: var(--gray-700);
+      margin: 0;
+    }
+
+    /* --- State 1: Form Styles --- */
+    .tabs-container {
+      display: flex;
+      border-bottom: 1px solid var(--gray-200);
+      margin-bottom: 1.5rem;
+    }
+    
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--gray-400);
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    
+    .tab-btn:hover {
+      background: none;
+      color: var(--gray-700);
+    }
+    
+    .tab-btn.active {
+      color: var(--primary-blue);
+      border-bottom-color: var(--primary-blue);
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    
+    .helper-text {
+      font-size: 0.8125rem;
+      color: var(--gray-700);
+      margin-top: 0.25rem;
+      margin-bottom: 0;
+    }
+    
+    .error-text {
+      color: var(--dark-red);
+      font-size: 0.8125rem;
+      margin-top: 0.25rem;
+      display: none;
+    }
+    
+    .error-text.visible {
+      display: block;
+    }
+    
+    .form-group input.error, .form-group textarea.error, .form-group select.error {
+      border-color: var(--dark-red);
+    }
+    
+    textarea, select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 4px;
+      font-size: 0.9375rem;
+      font-family: inherit;
+    }
+    
+    textarea:focus, select:focus {
+      outline: 2px solid var(--primary-blue);
+      outline-offset: -1px;
+    }
+    
+    button:disabled {
+      background-color: var(--gray-400) !important;
+      cursor: not-allowed !important;
+    }
+    
+    .submit-container {
+      text-align: right;
+      margin-top: 2rem;
+    }
+
+    /* --- State 2: Loading Styles --- */
+    .loading-card {
+      background-color: var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-radius: 8px;
+      padding: 3rem 1.5rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    /* A spinning circle to show work is happening */
+    .spinner {
+      margin: 0 auto 1.5rem auto;
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--gray-200);
+      border-top: 4px solid var(--primary-blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-detail {
+      font-size: 0.8125rem;
+      color: var(--gray-700);
+      margin-top: 0.5rem;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* --- State 3: Results Styles --- */
+    .results-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .results-header-bar h2 {
+      margin: 0;
+    }
+
+    .submitted-profile {
+      margin-bottom: 1.5rem;
+      font-size: 0.9375rem;
+    }
+    
+    .submitted-profile .label {
+      font-weight: 700;
+      color: var(--gray-700);
+      margin-right: 0.25rem;
+    }
+    
+    .submitted-profile .value {
+      color: var(--black);
+    }
+    
+    .badge-l1 {
+      padding: 0.375rem 1rem;
+    }
+    
+    .confidence-wrapper {
+      margin-top: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .confidence-label {
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+    
+    .confidence-track {
+      height: 6px;
+      background-color: var(--gray-200);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 0.25rem;
+    }
+    
+    .confidence-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+    
+    .confidence-desc {
+      font-size: 0.75rem;
+      color: var(--gray-700);
+    }
+    
+    .callout {
+      padding: 1rem;
+      border-radius: 4px;
+      margin-top: 1.5rem;
+    }
+    
+    .callout-amber {
+      border-left: 4px solid var(--amber);
+      background-color: #FFF8E1;
+    }
+    
+    .callout-green {
+      border-left: 4px solid var(--green);
+      background-color: #F0F9F2;
+    }
+    
+    .callout h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      font-size: 0.9375rem;
+    }
+    
+    .callout p {
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+    }
+    
+    .callout p:last-child {
+      margin-bottom: 0;
+    }
+    
+    .btn-secondary {
+      background-color: var(--white);
+      color: var(--primary-blue);
+      border: 1px solid var(--primary-blue);
+    }
+    
+    .btn-secondary:hover {
+      background-color: var(--gray-100);
+      color: var(--primary-blue);
+    }
+    
+    /* --- L2 Expert Panels --- */
+    .expert-container {
+      margin-top: 2.5rem;
+    }
+    
+    .expert-intro {
+      color: var(--gray-700);
+      margin-bottom: 1.5rem;
+      font-size: 0.9375rem;
+    }
+    
+    .panel {
+      background-color: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    
+    .panel-header {
+      padding: 1rem 1.5rem;
+      background-color: var(--white);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .panel-header:hover {
+      background-color: var(--gray-50);
+    }
+    
+    .panel-title {
+      font-weight: 700;
+      color: var(--black);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .panel-icon {
+      color: var(--gray-400);
+      font-size: 0.75rem;
+    }
+    
+    .panel-content {
+      padding: 0 1.5rem 1.5rem 1.5rem;
+      border-top: 1px solid var(--gray-200);
+      display: none;
+    }
+    
+    .panel.expanded .panel-content {
+      display: block;
+    }
+    
+    .panel-section-title {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--black);
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid var(--gray-200);
+      padding-bottom: 0.5rem;
+    }
+    
+    .cat-bar-wrapper {
+      margin-bottom: 1rem;
+    }
+    
+    .cat-bar-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.25rem;
+      font-size: 0.8125rem;
+    }
+    
+    .cat-name {
+      font-weight: 700;
+    }
+    
+    .cat-sev-label {
+      font-weight: 700;
+    }
+    
+    .cat-bar-track {
+      height: 8px;
+      background-color: var(--gray-200);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.25rem;
+    }
+    
+    .cat-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+    
+    .cat-stats {
+      font-size: 0.75rem;
+      color: var(--gray-700);
+    }
+    
+    .risk-card {
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .risk-category-pill {
+      display: inline-block;
+      background-color: var(--gray-200);
+      color: var(--gray-700);
+      padding: 0.125rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      align-self: flex-start;
+    }
+    
+    .risk-name {
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 0.5rem;
+    }
+
+    .risk-meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.8125rem;
+    }
+    
+    .risk-sev-track {
+      width: 40px;
+      height: 6px;
+      background-color: var(--gray-200);
+      border-radius: 3px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+    
+    .risk-sev-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .compliance-list {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+      margin: 0;
+      font-size: 0.875rem;
+    }
+    
+    .compliance-list li {
+      margin-bottom: 0.25rem;
+    }
+
+    /* --- L3 Styles --- */
+    .sub-panel-header {
+      padding: 0.75rem 1rem;
+      background-color: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      margin-top: 1rem;
+    }
+    
+    .sub-panel-header:hover {
+      background-color: var(--gray-100);
+    }
+    
+    .sub-panel-title {
+      font-weight: 700;
+      color: var(--black);
+      font-size: 0.875rem;
+    }
+    
+    .sub-panel-content {
+      padding: 1rem;
+      border: 1px solid var(--gray-200);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      display: none;
+    }
+    
+    .sub-panel.expanded .sub-panel-content {
+      display: block;
+    }
+    
+    .action-item {
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px dashed var(--gray-200);
+      font-size: 0.875rem;
+    }
+    
+    .action-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    
+    .action-row {
+      margin-bottom: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: baseline;
+    }
+    
+    .action-label {
+      font-weight: 700;
+      color: var(--gray-700);
+      min-width: 60px;
+    }
+    
+    .meta-block {
+      background-color: var(--gray-100);
+      padding: 1rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: var(--gray-400);
+      margin-top: 2rem;
+      line-height: 1.5;
+    }
+    
+    .meta-block span {
+      display: block;
+    }
+    
+    /* --- Deliberation Log --- */
+    .deliberation-container {
+      margin-top: 2rem;
+      display: none;
+    }
+    
+    .deliberation-header {
+      padding: 1rem 1.5rem;
+      background-color: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .deliberation-header:hover {
+      background-color: var(--gray-50);
+    }
+    
+    .deliberation-content {
+      border: 1px solid var(--gray-200);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      padding: 1.5rem;
+      background-color: var(--white);
+      display: none;
+    }
+    
+    .deliberation-container.expanded .deliberation-content {
+      display: block;
+    }
+    .deliberation-container.expanded .deliberation-header {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    
+    .delib-step {
+      border-left: 4px solid var(--primary-blue);
+      background-color: var(--gray-100);
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+    }
+    
+    .delib-step:last-child {
+      margin-bottom: 0;
+    }
+
+    /* --- State 4: Error Styles --- */
+    .error-card {
+      background-color: var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-radius: 8px;
+      border: 1px solid var(--dark-red);
+      border-left: 4px solid var(--dark-red);
+      padding: 2rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .error-icon {
+      font-size: 3rem;
+      color: var(--dark-red);
+      margin-bottom: 1rem;
+      line-height: 1;
+    }
+
+    .error-title {
+      color: var(--dark-red);
+      margin-bottom: 0.5rem;
+    }
+
+    .error-message {
+      margin-bottom: 1.5rem;
+    }
+
+    .error-code {
+      font-size: 0.75rem;
+      color: var(--gray-400);
+      margin-bottom: 1.5rem;
+      font-family: monospace;
+    }
+  </style>
 </head>
 <body>
-    <h1>UNICC AI Safety Lab</h1>
+  <!-- ===== HEADER ===== -->
+  <header>
+    <div class="accent-bar"></div>
+    <div class="page-padding">
+      <div class="page-container header-content">
+        <h1>UNICC AI Safety Lab</h1>
+        <p class="header-subtitle">Multi-Agent Safety Evaluation Platform</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-padding">
+    <div class="page-container">
+      
+      <!-- ===== STATE 1: INPUT FORM ===== -->
+      <section id="state-input" class="state-section visible">
+        <div class="card">
+          <h2>Start Evaluation</h2>
+          
+          <div class="tabs-container">
+            <button class="tab-btn active" id="tab-github">GitHub URL</button>
+            <button class="tab-btn" id="tab-manual">Manual Entry</button>
+          </div>
+          
+          <form id="eval-form" novalidate>
+            <!-- TAB A: GitHub URL -->
+            <div id="content-github" class="tab-content active">
+              <div class="form-group">
+                <label for="github-url">GitHub Repository URL</label>
+                <input type="url" id="github-url" placeholder="https://github.com/FlashCarrot/VeriMedia" required>
+                <p class="helper-text">Paste a GitHub repository URL. The system will analyze the codebase and extract agent details automatically.</p>
+                <div class="error-text" id="error-github-url">Must be a valid GitHub URL.</div>
+              </div>
+            </div>
+            
+            <!-- TAB B: Manual Entry -->
+            <div id="content-manual" class="tab-content">
+              <div class="form-group">
+                <label for="manual-name">Agent Name</label>
+                <input type="text" id="manual-name" placeholder="e.g., VeriMedia">
+                <p class="helper-text">The name of the AI system being evaluated</p>
+                <div class="error-text" id="error-manual-name">Agent Name is REQUIRED.</div>
+              </div>
+              <div class="form-group">
+                <label for="manual-type">Type</label>
+                <input type="text" id="manual-type" placeholder="e.g., content analysis tool">
+                <p class="helper-text">What kind of agent is this ? (2-3 words)</p>
+                <div class="error-text" id="error-manual-type">Type is REQUIRED.</div>
+              </div>
+              <div class="form-group">
+                <label for="manual-usecase">Use Case</label>
+                <textarea id="manual-usecase" rows="3" placeholder="e.g., Analyzes text, audio, and video for toxicity"></textarea>
+                <p class="helper-text">What does this agent do? Describe the main purpose in 1–2 sentences</p>
+                <div class="error-text" id="error-manual-usecase">Use Case is REQUIRED.</div>
+              </div>
+              <div class="form-group">
+                <label for="manual-deployment">Deployment</label>
+                <select id="manual-deployment">
+                  <option value="cloud">Cloud</option>
+                  <option value="on_prem">On-Premises</option>
+                  <option value="hybrid">Hybrid</option>
+                </select>
+                <p class="helper-text">Where does it run?</p>
+              </div>
+              <div class="form-group">
+                <label for="manual-auth">Auth</label>
+                <input type="text" id="manual-auth" placeholder="e.g., API key, OAuth2, or none">
+                <p class="helper-text">How is access controlled? Leave blank if none</p>
+              </div>
+              <div class="form-group">
+                <label for="manual-finetune">Finetune Data</label>
+                <input type="text" id="manual-finetune" placeholder="e.g., UN news corpus">
+                <p class="helper-text">What data was it trained on? Leave blank if not fine-tuned</p>
+              </div>
+              <div class="form-group">
+                <label for="manual-logging">Logging</label>
+                <select id="manual-logging">
+                  <option value="disabled" selected>Disabled</option>
+                  <option value="enabled">Enabled</option>
+                </select>
+                <p class="helper-text">Is logging enabled?</p>
+              </div>
+            </div>
+            
+            <div class="submit-container">
+              <!-- WARNING: Changing the ID of this button will break the javascript that attaches the submit event. -->
+              <button type="submit" id="submit-btn">Evaluate Agent</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ===== STATE 2: LOADING ===== -->
+      <section id="state-loading" class="state-section">
+        <div class="loading-card">
+          <div class="spinner" role="status" aria-label="Loading"></div>
+          <h2>Evaluating agent safety...</h2>
+          <p>This typically takes 60–90 seconds.</p>
+          <p class="loading-detail">Three independent safety experts are analyzing your submission from different regulatory perspectives.</p>
+        </div>
+      </section>
+
+      <!-- ===== STATE 3: RESULTS ===== -->
+      <section id="state-results" class="state-section">
+        <div class="results-header-bar">
+          <h2>Evaluation Results</h2>
+        </div>
+
+        <div class="submitted-profile">
+          <span class="label">Evaluated Agent:</span>
+          <span class="value" id="res-agent-name" style="font-weight: 700;"></span> — 
+          <span class="value" id="res-agent-type"></span>
+        </div>
+        
+        <div class="card">
+          <span class="section-label">Overall Verdict</span>
+          
+          <div style="margin-bottom: 0.5rem;">
+            <div id="res-verdict-badge" class="badge badge-l1"></div>
+          </div>
+          <p id="res-verdict-desc" class="label"></p>
+
+          <div class="confidence-wrapper">
+            <span class="confidence-label" id="res-confidence-text"></span>
+            <div class="confidence-track">
+              <div id="res-confidence-fill" class="confidence-fill"></div>
+            </div>
+            <span class="confidence-desc">How strongly the three experts agreed on this verdict</span>
+          </div>
+
+          <p id="res-synth-summary" style="margin-top: 1.5rem;"></p>
+
+          <div id="res-disagreements-box" class="callout"></div>
+        </div>
+
+        <div id="res-l2-experts-container" class="expert-container" style="display: none;">
+          <p class="expert-intro">Each AI agent was evaluated independently by three safety experts, each applying a different regulatory framework. Expand any expert's report to see their detailed findings.</p>
+          <div id="res-l2-accordion"></div>
+        </div>
+
+        <div id="res-l3-deliberation-container" class="deliberation-container">
+          <div class="deliberation-header" id="delib-header-btn">
+            <div class="panel-title">
+              <span>How the Final Verdict Was Reached</span>
+            </div>
+            <div class="panel-icon" id="delib-icon">▶</div>
+          </div>
+          <div class="deliberation-content" id="res-deliberation-log"></div>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+          <button id="btn-restart" class="btn-secondary">Evaluate Another Agent</button>
+        </div>
+      </section>
+
+      <!-- ===== STATE 4: ERROR ===== -->
+      <section id="state-error" class="state-section">
+        <div class="error-card">
+          <div class="error-icon">⚠</div>
+          <h2 class="error-title">Something went wrong</h2>
+          <p class="error-message" id="error-message-text"></p>
+          <p class="error-code" id="error-code-text"></p>
+          <button onclick="showState('state-input')">Try Again</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script> 
+    /* ===== ALL JS HERE ===== */
+
+    // --- MOCK DATA ---
+    const MOCK_MODE = true;
+    
+    const MOCK_RESPONSE = {
+      "report_meta": {
+        "run_id": "eval_18a7b9fc2",
+        "generated_at": new Date().toISOString(),
+        "framework_version": "v1.2.0",
+        "protocol_version": "2.0",
+        "generator": "UNICC_multi_agent_judge"
+      },
+      "model_summary": {
+        "name": "VeriMedia",
+        "type": "Content Analysis Tool",
+        "use_case": "Analyzes text, audio, and video for toxicity, bias, and misinformation.",
+        "deployment": "Hybrid",
+        "auth": "OAuth2 + API Key",
+        "finetune_data": "UN News Corpus, Public domain media",
+        "logging": "Enabled"
+      },
+      "category_summary": {
+        "Technical":  { "avg_severity": 3.2, "pass": 15, "fail": 2, "needs_attention": 4 },
+        "Ethical":    { "avg_severity": 4.1, "pass": 10, "fail": 1, "needs_attention": 5 },
+        "Legal":      { "avg_severity": 2.5, "pass": 18, "fail": 0, "needs_attention": 2 },
+        "Societal":   { "avg_severity": 3.8, "pass": 12, "fail": 1, "needs_attention": 3 }
+      },
+      "top_risks": [
+        {
+          "risk_id": "risk_owasp_11",
+          "name": "Prompt Injection Vulnerability",
+          "category": "Technical",
+          "severity": 4,
+          "judgement": "fail"
+        },
+        {
+          "risk_id": "risk_unesco_04",
+          "name": "Implicit Bias in Multilingual Audio Parsing",
+          "category": "Ethical",
+          "severity": 4,
+          "judgement": "fail"
+        },
+        {
+          "risk_id": "risk_eu_act_22",
+          "name": "Lack of Real-time Human Oversight Mechanism",
+          "category": "Legal",
+          "severity": 3,
+          "judgement": "needs_attention"
+        }
+      ],
+      "compliance_mapping": {
+        "eu_ai_act": ["Article 14: Human oversight missing for automated flagging"],
+        "iso_iec": ["ISO/IEC 23894: Risk assessment missing adversarial testing"],
+        "nist_ai_rmf": ["MAP 1.5: Interoperability boundaries not fully defined"],
+        "ieee": ["IEEE 7000: Transparency measures lack clear end-user documentation"],
+        "unesco": ["Principle 4: Non-discrimination not provably guaranteed for minority dialects"]
+      },
+      "gaps_and_actions": [
+        {
+          "gap": "System lacks robust input sanitization against advanced adversarial prompts.",
+          "impact": "High",
+          "recommended_action": "Implement strict input validation layers and leverage an LLM proxy firewall.",
+          "priority": "high",
+          "eta_days": 14
+        },
+        {
+          "gap": "Bias identified in transcription of specific regional dialects.",
+          "impact": "Medium",
+          "recommended_action": "Finetune speech-to-text models on underrepresented voice datasets.",
+          "priority": "medium",
+          "eta_days": 30
+        },
+        {
+          "gap": "Human-in-the-loop override capability is not exposed through the main dashboard API.",
+          "impact": "High",
+          "recommended_action": "Introduce a mandatory review queue API endpoint for high-confidence toxicity flags.",
+          "priority": "high",
+          "eta_days": 7
+        }
+      ],
+      "final_recommendation": "hold_and_fix",
+      "executive_summary": "VeriMedia demonstrates strong capabilities in general content analysis but fails critical requirements for prompt injection resilience (OWASP) and non-discrimination in dialects (UNESCO). The EU AI Act agent also flagged a missing human-in-the-loop mechanism. The tool should be held from production until input sanitization and bias mitigation steps are completed."
+    };
+
+    // --- functionName: showState: switches which screen is visible ---
+    // Only one state div is visible at a time.
+    // stateId must be one of: 'state-input', 'state-loading', 'state-results', 'state-error'
+    function showState(stateId) {
+      // WARNING: if stateId isn't correctly spelled, the screen will be completely empty and users will be stuck. 
+      const states = ['state-input', 'state-loading', 'state-results', 'state-error'];
+      for (let i = 0; i < states.length; i++) {
+        const matchingStateHtmlElement = document.getElementById(states[i]);
+        if (matchingStateHtmlElement) {
+          if (states[i] === stateId) {
+            matchingStateHtmlElement.classList.add('visible');
+          } else {
+            matchingStateHtmlElement.classList.remove('visible');
+          }
+        }
+      }
+      
+      // Double-submit prevention: re-enable button when switching back to input state
+      if (stateId === 'state-input') {
+        const submitBtn = document.getElementById('submit-btn');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Evaluate Agent';
+        }
+      }
+    }
+
+    // --- functionName: switchTab: handles toggling between GitHub URL and Manual Entry modes ---
+    function switchTab(mode) {
+      const btnGithub = document.getElementById('tab-github');
+      const btnManual = document.getElementById('tab-manual');
+      const contentGithub = document.getElementById('content-github');
+      const contentManual = document.getElementById('content-manual');
+      const githubInput = document.getElementById('github-url');
+
+      if (mode === 'github') {
+        btnGithub.classList.add('active');
+        btnManual.classList.remove('active');
+        contentGithub.classList.add('active');
+        contentManual.classList.remove('active');
+        githubInput.setAttribute('required', 'true');
+      } else {
+        btnManual.classList.add('active');
+        btnGithub.classList.remove('active');
+        contentManual.classList.add('active');
+        contentGithub.classList.remove('active');
+        githubInput.removeAttribute('required'); // Unblock submit
+      }
+    }
+
+    // --- functionName: validateForm: Runs client-side validation logic before API call ---
+    function validateForm(activeMode) {
+      let isValid = true;
+      
+      // Reset errors
+      document.querySelectorAll('.error-text').forEach(el => el.classList.remove('visible'));
+      document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+
+      if (activeMode === 'github') {
+        const urlInput = document.getElementById('github-url');
+        const val = urlInput.value.trim();
+        if (!val || !val.startsWith('https://github.com/')) {
+          isValid = false;
+          urlInput.classList.add('error');
+          document.getElementById('error-github-url').classList.add('visible');
+        }
+      } else {
+        const manualFields = [
+          {id: 'manual-name', errorId: 'error-manual-name'},
+          {id: 'manual-type', errorId: 'error-manual-type'},
+          {id: 'manual-usecase', errorId: 'error-manual-usecase'}
+        ];
+        
+        manualFields.forEach(field => {
+          const input = document.getElementById(field.id);
+          if (!input.value.trim()) {
+            isValid = false;
+            input.classList.add('error');
+            document.getElementById(field.errorId).classList.add('visible');
+          }
+        });
+      }
+      return isValid;
+    }
+
+    // --- functionName: renderResults: Renders the API response into State 3 ---
+    function renderResults(data) {
+      // 1. Submitted profile
+      const modelSum = data.model_summary || {};
+      document.getElementById('res-agent-name').textContent = modelSum.name || "Unknown Agent";
+      document.getElementById('res-agent-type').textContent = modelSum.type || "Unknown Type";
+      
+      // 2. Verdict Badge and Description
+      const badgeEl = document.getElementById('res-verdict-badge');
+      const descEl = document.getElementById('res-verdict-desc');
+      const v = data.final_recommendation || "review";
+      
+      badgeEl.className = 'badge badge-l1'; // reset
+      
+      if (v === 'approve') {
+        badgeEl.textContent = 'APPROVE';
+        badgeEl.classList.add('badge-approve');
+        descEl.textContent = 'This agent meets safety requirements';
+      } else if (v === 'hold_and_fix') {
+        badgeEl.textContent = 'REJECT';
+        badgeEl.classList.add('badge-reject');
+        descEl.textContent = 'This agent has significant safety concerns and should not be deployed as-is';
+      } else {
+        badgeEl.textContent = 'REVIEW';
+        badgeEl.classList.add('badge-review');
+        descEl.textContent = 'This agent has issues that need to be addressed before deployment';
+      }
+      
+      // 3. Confidence
+      const confValue = (data.confidence !== undefined) ? data.confidence : 85;
+      const confText = document.getElementById('res-confidence-text');
+      const confFill = document.getElementById('res-confidence-fill');
+      
+      confText.textContent = `Confidence %: ${confValue}%`;
+      confFill.style.width = `${confValue}%`;
+      
+      if (confValue >= 80) {
+        confFill.style.backgroundColor = 'var(--green)';
+      } else if (confValue >= 50) {
+        confFill.style.backgroundColor = 'var(--amber)';
+      } else {
+        confFill.style.backgroundColor = 'var(--dark-red)';
+      }
+      
+      // 4. Synthesized Summary
+      const synthText = data.synthesized_summary || data.executive_summary || "No executive summary provided.";
+      document.getElementById('res-synth-summary').textContent = synthText;
+      
+      // 5. Disagreements
+      const diagBox = document.getElementById('res-disagreements-box');
+      diagBox.innerHTML = ''; 
+      
+      const disagreements = data.disagreements || [];
+      if (disagreements.length > 0) {
+        diagBox.className = 'callout callout-amber';
+        const h3 = document.createElement('h3');
+        h3.textContent = 'Where the Experts Disagreed';
+        diagBox.appendChild(h3);
+        
+        disagreements.forEach(str => {
+          const p = document.createElement('p');
+          p.textContent = str;
+          diagBox.appendChild(p);
+        });
+      } else {
+        diagBox.className = 'callout callout-green';
+        const p = document.createElement('p');
+        p.textContent = 'All three experts reached the same conclusion.';
+        diagBox.appendChild(p);
+      }
+      
+      // 6. L2 Expert Reports
+      renderL2Experts(data.agent_assessments);
+
+      // 7. Deliberation Log
+      const delibContainer = document.getElementById('res-l3-deliberation-container');
+      const delibContent = document.getElementById('res-deliberation-log');
+      delibContent.innerHTML = '';
+      
+      const dLog = data.deliberation_log || [];
+      if (dLog.length > 0) {
+        delibContainer.style.display = 'block';
+        dLog.forEach((step, i) => {
+          const div = document.createElement('div');
+          div.className = 'delib-step';
+          div.innerHTML = `<strong>${i + 1}.</strong> ${step}`;
+          delibContent.appendChild(div);
+        });
+      } else {
+        delibContainer.style.display = 'none';
+      }
+    }
+
+    // --- functionName: renderL2Experts: Builds the accordion panels for expert data ---
+    function renderL2Experts(reports) {
+      const container = document.getElementById('res-l2-experts-container');
+      const accordion = document.getElementById('res-l2-accordion');
+      accordion.innerHTML = '';
+      
+      if (!reports || reports.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      
+      container.style.display = 'block';
+      
+      const frameworkDisplay = {
+        'eu_ai_act': 'EU AI Act',
+        'iso_iec': 'ISO/IEC Standards',
+        'nist_ai_rmf': 'NIST AI Risk Management Framework',
+        'ieee': 'IEEE Standards',
+        'unesco': 'UNESCO AI Ethics'
+      };
+
+      reports.forEach((report, index) => {
+        let agentName = `Expert ${index + 1}: General Analysis`;
+        const gen = (report.report_meta && report.report_meta.generator) || `agent_${index + 1}`;
+        if (gen.includes('eu_ai_act') || index === 0) agentName = `Expert ${index + 1}: EU AI Act Analysis`;
+        else if (gen.includes('owasp') || index === 1) agentName = `Expert ${index + 1}: OWASP Security Analysis`;
+        else if (gen.includes('unesco') || index === 2) agentName = `Expert ${index + 1}: UNESCO Ethics Analysis`;
+
+        const panel = document.createElement('div');
+        panel.className = 'panel';
+        
+        let rec = report.final_recommendation || 'review';
+        let badgeClass = 'badge-review';
+        let badgeText = 'REVIEW';
+        if (rec === 'approve') { badgeClass = 'badge-approve'; badgeText = 'APPROVE'; }
+        else if (rec === 'hold_and_fix') { badgeClass = 'badge-reject'; badgeText = 'REJECT'; }
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'panel-header';
+        header.innerHTML = `
+          <div class="panel-title">
+            <span>${agentName}</span>
+            <span class="badge ${badgeClass}" style="font-size: 0.6875rem; padding: 0.125rem 0.5rem;">${badgeText}</span>
+          </div>
+          <div class="panel-icon">▶</div>
+        `;
+        
+        // Content
+        const content = document.createElement('div');
+        content.className = 'panel-content';
+
+        // Executive Summary
+        if (report.executive_summary) {
+          const p = document.createElement('p');
+          p.style.marginTop = '1.5rem';
+          p.textContent = report.executive_summary;
+          content.appendChild(p);
+        }
+
+        // Risk Overview
+        if (report.category_summary) {
+          const title = document.createElement('div');
+          title.className = 'panel-section-title';
+          title.textContent = 'Risk Overview';
+          content.appendChild(title);
+
+          const cats = ['Technical', 'Ethical', 'Legal', 'Societal'];
+          cats.forEach(c => {
+            const sum = report.category_summary[c];
+            if (!sum) return;
+            
+            const sev = sum.avg_severity || 0;
+            let color = 'var(--green)';
+            let label = 'Low Risk';
+            if (sev > 0.6) { color = 'var(--dark-red)'; label = 'High Risk'; }
+            else if (sev > 0.3) { color = 'var(--amber)'; label = 'Medium Risk'; }
+            
+            const w = document.createElement('div');
+            w.className = 'cat-bar-wrapper';
+            w.innerHTML = `
+              <div class="cat-bar-header">
+                <span class="cat-name">${c}</span>
+                <span class="cat-sev-label" style="color: ${color}">${label} (${sev.toFixed(1)})</span>
+              </div>
+              <div class="cat-bar-track">
+                <div class="cat-bar-fill" style="width: ${sev * 100}%; background-color: ${color};"></div>
+              </div>
+              <div class="cat-stats">Pass: ${sum.pass} | Fail: ${sum.fail} | Needs Attention: ${sum.needs_attention}</div>
+            `;
+            content.appendChild(w);
+          });
+        }
+
+        // Top Risks
+        if (report.top_risks && report.top_risks.length > 0) {
+          const title = document.createElement('div');
+          title.className = 'panel-section-title';
+          title.textContent = 'Key Risks Found';
+          content.appendChild(title);
+
+          report.top_risks.forEach(risk => {
+            const sev = risk.severity || 0;
+            let fillWidth = (sev / 5) * 100; // Assume 0-5 scale typical 
+            if (sev > 0 && sev <= 1) fillWidth = sev * 100; // if 0-1 scale used accidentally
+            
+            let color = 'var(--green)';
+            let label = 'Low';
+            if (sev >= 4 || (sev > 0.6 && sev <= 1)) { color = 'var(--dark-red)'; label = 'High'; }
+            else if (sev >= 2 || (sev > 0.3 && sev <= 1)) { color = 'var(--amber)'; label = 'Medium'; }
+
+            let rClass = 'badge-review';
+            let rText = (risk.judgement || 'needs_attention').toUpperCase().replace('_', ' ');
+            if (rText === 'PASS') rClass = 'badge-approve';
+            if (rText === 'FAIL') rClass = 'badge-reject';
+
+            const card = document.createElement('div');
+            card.className = 'risk-card';
+            card.innerHTML = `
+              <div class="risk-card-header">
+                <span class="risk-category-pill">${risk.category || 'General'}</span>
+                <span class="risk-name">${risk.name}</span>
+              </div>
+              <div class="risk-meta">
+                <div class="risk-sev">
+                  <span>Severity:</span>
+                  <div class="risk-sev-track"><div class="risk-sev-fill" style="width: ${fillWidth}%; background-color: ${color};"></div></div>
+                  <span>${label}</span>
+                </div>
+                <div>Result: <span class="badge ${rClass}" style="font-size: 0.625rem; padding: 0.125rem 0.375rem;">${rText}</span></div>
+              </div>
+            `;
+            content.appendChild(card);
+          });
+        }
+
+        // Compliance Mapping
+        if (report.compliance_mapping) {
+          const title = document.createElement('div');
+          title.className = 'panel-section-title';
+          title.textContent = 'Regulatory Standards Referenced';
+          content.appendChild(title);
+
+          const list = document.createElement('ul');
+          list.className = 'compliance-list';
+          
+          for (const [key, mappingArray] of Object.entries(report.compliance_mapping)) {
+            const li = document.createElement('li');
+            const fwName = frameworkDisplay[key] || key;
+            if (!mappingArray || mappingArray.length === 0) {
+               li.innerHTML = `<strong>${fwName}:</strong> No specific references identified`;
+            } else {
+               li.innerHTML = `<strong>${fwName}:</strong> ${mappingArray.join(', ')}`;
+            }
+            list.appendChild(li);
+          }
+          content.appendChild(list);
+        }
+
+        // Recommended Actions
+        if (report.gaps_and_actions && report.gaps_and_actions.length > 0) {
+          const subPanel = document.createElement('div');
+          subPanel.className = 'sub-panel';
+          
+          const sHeader = document.createElement('div');
+          sHeader.className = 'sub-panel-header';
+          sHeader.innerHTML = `
+            <div class="sub-panel-title">Recommended Actions (${report.gaps_and_actions.length} items)</div>
+            <div class="panel-icon">▶</div>
+          `;
+          
+          const sContent = document.createElement('div');
+          sContent.className = 'sub-panel-content';
+          
+          report.gaps_and_actions.forEach(act => {
+            const getBadgeClass = (str) => {
+              const s = (str || '').toLowerCase();
+              if (s === 'low') return 'badge-approve';
+              if (s === 'medium') return 'badge-review';
+              if (s === 'high' || s === 'critical') return 'badge-reject';
+              return 'badge-review';
+            };
+            
+            const iClass = getBadgeClass(act.impact);
+            const pClass = getBadgeClass(act.priority);
+            
+            const div = document.createElement('div');
+            div.className = 'action-item';
+            div.innerHTML = `
+              <div class="action-row"><div class="action-label">Gap:</div><div>${act.gap}</div></div>
+              <div class="action-row">
+                <div class="action-label">Impact:</div><div><span class="badge ${iClass}" style="font-size:0.625rem;">${act.impact || 'Unknown'}</span></div>
+                <div class="action-label" style="margin-left: 1rem;">Priority:</div><div><span class="badge ${pClass}" style="font-size:0.625rem;">${act.priority || 'Unknown'}</span></div>
+              </div>
+              <div class="action-row"><div class="action-label">Action:</div><div>${act.recommended_action}</div></div>
+              <div class="action-row"><div class="action-label">Timeline:</div><div>approximately ${act.eta_days || '-'} days</div></div>
+            `;
+            sContent.appendChild(div);
+          });
+          
+          sHeader.addEventListener('click', () => {
+            const isExpanded = subPanel.classList.toggle('expanded');
+            sHeader.querySelector('.panel-icon').textContent = isExpanded ? '▼' : '▶';
+          });
+          
+          subPanel.appendChild(sHeader);
+          subPanel.appendChild(sContent);
+          content.appendChild(subPanel);
+        }
+        
+        // Report Metadata
+        if (report.report_meta) {
+           const meta = document.createElement('div');
+           meta.className = 'meta-block';
+           
+           const rId = report.report_meta.run_id || 'unknown-run';
+           const tsRaw = report.report_meta.generated_at;
+           let tsFormat = 'Unknown Date';
+           if (tsRaw) {
+             try { 
+               const d = new Date(tsRaw);
+               const md = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+               const tm = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+               tsFormat = `${md} at ${tm}`;
+             } catch(e) { tsFormat = tsRaw; }
+           }
+           
+           meta.innerHTML = `
+             <span><strong>Run ID:</strong> ${rId}</span>
+             <span><strong>Generated:</strong> ${tsFormat}</span>
+             <span><strong>Framework version:</strong> ${report.report_meta.framework_version || '1.0.0'}</span>
+             <span><strong>Generator ID:</strong> ${gen}</span>
+           `;
+           content.appendChild(meta);
+        }
+
+        header.addEventListener('click', () => {
+          const isExpanded = panel.classList.toggle('expanded');
+          panel.querySelector('.panel-icon').textContent = isExpanded ? '▼' : '▶';
+        });
+
+        panel.appendChild(header);
+        panel.appendChild(content);
+        accordion.appendChild(panel);
+      });
+    }
+
+    // --- functionName: handleError: Populates the error screen and displays it ---
+    function handleError(title, message, code) {
+      document.querySelector('.error-title').textContent = title;
+      document.getElementById('error-message-text').textContent = message;
+      
+      const elCode = document.getElementById('error-code-text');
+      if (code && code !== '') {
+        elCode.textContent = "Error Code: " + code;
+        elCode.style.display = 'block';
+      } else {
+        elCode.textContent = "";
+        elCode.style.display = 'none';
+      }
+      
+      showState('state-error');
+    }
+
+    // --- functionName: submitEvaluation: sends the form data to the backend ---
+    async function submitEvaluation(event) {
+      event.preventDefault(); // Prevent standard browser submit
+      
+      const btnGithub = document.getElementById('tab-github');
+      const activeMode = btnGithub.classList.contains('active') ? 'github' : 'manual';
+      
+      // 1. Validate inputs
+      if (!validateForm(activeMode)) {
+        return;
+      }
+
+      // 4. Disable submit button (prevent double-click)
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Evaluating...';
+      
+      // 2. Build request body based on active tab
+      let payload = {};
+      if (activeMode === 'github') {
+         payload = { github_url: document.getElementById('github-url').value.trim() };
+      } else {
+         const authVal = document.getElementById('manual-auth').value.trim() || 'none';
+         const ftVal = document.getElementById('manual-finetune').value.trim() || 'none';
+         const logVal = document.getElementById('manual-logging').value || 'disabled';
+         
+         payload = {
+           model_profile: {
+             name: document.getElementById('manual-name').value.trim(),
+             type: document.getElementById('manual-type').value.trim(),
+             use_case: document.getElementById('manual-usecase').value.trim(),
+             deployment: document.getElementById('manual-deployment').value,
+             auth: authVal,
+             finetune_data: ftVal,
+             logging: logVal
+           }
+         };
+      }
+
+      // WARNING: We log payload here so you can verify it in console.
+      console.log("Submitting payload:", JSON.stringify(payload));
+      
+      // 3. Switch to LOADING state
+      showState('state-loading');
+
+      // MOCK MODE Handling
+      if (typeof MOCK_MODE !== 'undefined' && MOCK_MODE) {
+         setTimeout(function() {
+            // Mock out L3 arrays
+            const mockGaps = [
+              { gap: "No explicit system prompt boundaries", impact: "High", priority: "High", recommended_action: "Implement strict system prompt guardrails", eta_days: 14 },
+              { gap: "Logging does not capture failed interactions", impact: "Medium", priority: "Medium", recommended_action: "Update logging schema to include negative state captures", eta_days: 7 }
+            ];
+
+            // Ensure the mock has the fields expected by the renderer
+            const renderedData = Object.assign({
+              final_recommendation: "review",
+              synthesized_summary: "The ensemble detected several moderate risks. The agent requires updates before deployment.",
+              confidence: 85,
+              disagreements: ["OWASP flagged prompt injection as high probability, whereas EU AI Act classified it as a documentation failure.", "UNESCO diverged on severity of dialect transcription bias, marking it critical while others saw it as moderate."],
+              deliberation_log: [
+                "Synthesized initial findings from all three regulatory assessments.",
+                "Identified conflicting severity for prompt injection; weighted OWASP Technical findings higher due to the agent's deployment nature.",
+                "Calculated overall confidence score based on mapping divergences in the Societal risk framework.",
+                "Generated final unified recommendation of 'REVIEW' pending essential fixes."
+              ]
+            }, MOCK_RESPONSE);
+            
+            renderedData.agent_assessments = [
+              Object.assign({}, MOCK_RESPONSE, {
+                report_meta: { generator: 'eu_ai_act', run_id: 'rnd_8a9a23', generated_at: '2026-04-05T14:35:00Z', framework_version: '2.1' },
+                final_recommendation: 'review',
+                executive_summary: "The agent shows promising capability but lacks comprehensive human oversight and logging as mandated by the EU AI Act.",
+                gaps_and_actions: mockGaps
+              }),
+              Object.assign({}, MOCK_RESPONSE, {
+                report_meta: { generator: 'owasp', run_id: 'rnd_2b4f99', generated_at: '2026-04-05T14:35:01Z', framework_version: '4.0' },
+                final_recommendation: 'hold_and_fix',
+                executive_summary: "Severe vulnerabilities related to prompt injection and insufficient input validation detected.",
+                top_risks: MOCK_RESPONSE.top_risks ? MOCK_RESPONSE.top_risks.filter(function(r) { return r.category === 'Technical'; }) : [],
+                gaps_and_actions: mockGaps
+              }),
+              Object.assign({}, MOCK_RESPONSE, {
+                report_meta: { generator: 'unesco', run_id: 'rnd_1e3d77', generated_at: '2026-04-05T14:35:02Z', framework_version: '1.2' },
+                final_recommendation: 'review',
+                executive_summary: "The model demonstrates ethical risks related to representation in speech training datasets, posing slight non-discrimination risks.",
+                gaps_and_actions: mockGaps
+              })
+            ];
+            
+            renderResults(renderedData);
+            showState('state-results');
+         }, 1500);
+         return; // Short-circuit actual fetch
+      }
+
+      // 5. Start 120-second timeout timer
+      const timeoutId = setTimeout(function() {
+        handleError(
+          "Request Timed Out", 
+          "The evaluation is taking longer than expected. The server may be busy — please try again."
+        );
+      }, 120000);
+
+      // WARNING: Never use innerHTML to display API response data.
+      // Always use textContent or createTextNode to prevent code injection.
+
+      // WARNING: Do not assume the response has all fields.
+      // P2's pipeline may return partial data if an agent fails mid-evaluation.
+      // Always check for field existence before accessing nested properties.
+      // Use optional chaining: response?.agent_assessments?.[0]?.category_summary
+
+      // 6. Call fetch()
+      fetch('/api/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(response) {
+        clearTimeout(timeoutId); // 9. In all cases: clear timeout
+        return response.json().catch(function() {
+           throw Error("Unexpected Response");
+        });
+      })
+      .then(function(data) {
+        if (data.error === true) {
+          handleError(
+            "Evaluation Failed", 
+            data.error_message || "Unknown error occurred.", 
+            data.error_code || ""
+          );
+          return;
+        }
+        
+        // 7. On success: parse JSON, validate required fields exist, switch to RESULTS state
+        const hasReqs = Boolean(
+          data &&
+          typeof data.final_recommendation === 'string' && 
+          typeof data.synthesized_summary === 'string' && 
+          (data.confidence !== undefined) && 
+          data.agent_assessments && Array.isArray(data.agent_assessments) && data.agent_assessments.length >= 1
+        );
+
+        if (!hasReqs) {
+          handleError(
+            "Unexpected Response", 
+            "The server returned a response that could not be understood. Core logic properties were missing."
+          );
+          return;
+        }
+
+        renderResults(data);
+        showState('state-results');
+      })
+      .catch(function(err) {
+        clearTimeout(timeoutId); 
+        
+        // 8. On error: switch to ERROR state with appropriate message
+        if (err.message === "Unexpected Response") {
+           handleError(
+             "Unexpected Response", 
+             "The server returned a response that could not be understood. This may indicate a configuration issue."
+           );
+        } else {
+           handleError(
+             "Connection Error", 
+             "Could not reach the evaluation server. Make sure the server is running at http://localhost:8000 and try again."
+           );
+        }
+      });
+    }
+
+    // --- functionName: setupEventListeners: sets up form and button clicks ---
+    // Attaches initial click tracking so the buttons work right away.
+    function setupEventListeners() {
+      const formElement = document.getElementById('eval-form');
+      const btnGithub = document.getElementById('tab-github');
+      const btnManual = document.getElementById('tab-manual');
+      const submitBtn = document.getElementById('submit-btn');
+
+      if (btnGithub && btnManual) {
+        btnGithub.addEventListener('click', function(e) { 
+          e.preventDefault(); 
+          switchTab('github'); 
+        });
+        btnManual.addEventListener('click', function(e) { 
+          e.preventDefault(); 
+          switchTab('manual'); 
+        });
+      }
+
+      if (formElement) {
+        formElement.addEventListener('submit', submitEvaluation);
+      }
+
+      // Setup Deliberation Accordion Toggle
+      const delibHeaderBtn = document.getElementById('delib-header-btn');
+      if (delibHeaderBtn) {
+        delibHeaderBtn.addEventListener('click', function() {
+          const container = document.getElementById('res-l3-deliberation-container');
+          const isExpanded = container.classList.toggle('expanded');
+          document.getElementById('delib-icon').textContent = isExpanded ? '▼' : '▶';
+        });
+      }
+
+      const restartButton = document.getElementById('btn-restart');
+      if (restartButton) {
+        restartButton.addEventListener('click', function() {
+          if (formElement) formElement.reset(); // clear form inputs
+          // Clear DOM fields
+          document.getElementById('res-agent-name').textContent = '';
+          document.getElementById('res-agent-type').textContent = '';
+          document.getElementById('res-synth-summary').textContent = '';
+          document.getElementById('res-disagreements-box').innerHTML = '';
+          
+          showState('state-input');
+        });
+      }
+    }
+
+    // --- functionName: applicationStart: runs when the page is completely loaded ---
+    // This is the starting point for all our javascript logic.
+    document.addEventListener('DOMContentLoaded', function() {
+      setupEventListeners();
+      // Temporary test to preview loading
+      //showState('state-error');
+    });
+  </script>
 </body>
 </html>
