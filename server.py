@@ -75,7 +75,16 @@ async def evaluate(request: Request):
         )
 
     # --- Parse & validate request body ---
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(
+            status_code=400,
+            content=ErrorResponse(
+                error_code="INVALID_JSON",
+                error_message="Request body is not valid JSON.",
+            ).model_dump(),
+        )
 
     try:
         req = EvaluateRequest(**body)
