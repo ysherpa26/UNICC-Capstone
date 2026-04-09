@@ -134,7 +134,29 @@ async def evaluate(request: Request):
                 error_message="The evaluation pipeline crashed. Check server logs.",
             ).model_dump(),
         )
-
+# ------------------------------------------------------------
+    # Repo evidence injection: enrich model_profile with code-level
+    # evidence from the actual repository so the 3 agents and the
+    # judge reason from grounded, repo-specific details instead of
+    # the 7 abstract fields alone.
+    #
+    # Best-effort: never fails the request. If the inspector fails,
+    # the pipeline runs on the 7 fields alone.
+    # Only runs when the user submitted a GitHub URL (manual form
+    # submissions skip this — there's no repo to inspect).
+    # ------------------------------------------------------------
+    if req.github_url:
+        try:
+            from repo_inspector import build_evidence_pack
+            repo_evidence = build_evidence_pack(req.github_url)
+            if repo_evidence and not repo_evidence.startswith("[repo_inspector error]"):
+                # Budgeted: ~8000 chars leaves room for 8K-context Groq
+                # models after system prompt and other user message content.
+                model_profile_dict["repo_evidence"] = repo_evidence[:8000]
+        except Exception:
+            print("[server] repo_inspector failed (non-fatal):")
+            print(traceback.format_exc())
+            
     # --- Validate & return ---
     result = validate_ensemble_response(raw_result)
 
