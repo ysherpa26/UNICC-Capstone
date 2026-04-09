@@ -20,7 +20,7 @@ from schemas import EvaluateRequest, ErrorResponse, validate_ensemble_response
 # ---------------------------------------------------------------------------
 try:
     from repo_reader import extract_model_profile
-    from pipeline import run_ensemble
+    from agents import run_ensemble
     _p2_available = True
     _p2_error = None
 except ImportError as e:
