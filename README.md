@@ -8,7 +8,8 @@ Multi-agent AI safety evaluation platform. Submit an AI agent (via GitHub URL or
 
 ### Prerequisites
 - Python 3.10+
-- An API key for one of: Anthropic, Groq
+- Git (required for cloning repositories during evaluation)
+- API key for either Anthropic or Groq 
 
 ### Installation
 ```bash
@@ -29,6 +30,7 @@ Or for Groq:
 ```
 GROQ_API_KEY=your_key_here
 ```
+**Per-agent model selection (Groq only).** When running with `GROQ_API_KEY`, you can override which Groq model each of the three expert agents uses via the `AGENT_1_MODEL`, `AGENT_2_MODEL`, and `AGENT_3_MODEL` environment variables. Sensible defaults are provided in `.env.example`. When running with `ANTHROPIC_API_KEY`, all three agents use Claude and these overrides are ignored. Before changing defaults, verify the model IDs against the current Groq production model list at https://console.groq.com/docs/models — Groq deprecates older models periodically.
 
 ### Run
 ```bash

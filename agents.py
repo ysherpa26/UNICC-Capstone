@@ -13,7 +13,7 @@ All agents produce the same output schema so judge.py can compare them.
 Public function:
     run_ensemble(model_profile: dict) -> dict
 """
-
+import os
 import concurrent.futures
 import uuid
 from datetime import datetime, timezone
@@ -27,7 +27,7 @@ from pipeline import run_single_agent
 AGENTS = [
     {
         "id": "agent_1",
-        "model_override": "llama-3.1-8b-instant",
+        "model_override": os.getenv("AGENT_1_MODEL", "llama-3.1-8b-instant"),
         "lens": "EU AI Act / Legal Compliance",
         "system_prompt": (
             "You are the AI Safety Risk Mapping Agent — EU AI Act Specialist.\n\n"
@@ -75,7 +75,7 @@ AGENTS = [
     },
     {
         "id": "agent_2",
-        "model_override": "mixtral-8x7b-32768",
+        "model_override": os.getenv("AGENT_2_MODEL", "llama-3.3-70b-versatile"),
         "lens": "OWASP Top 10 for LLMs / Technical Security",
         "system_prompt": (
             "You are the AI Safety Risk Mapping Agent — OWASP LLM Security Specialist.\n\n"
@@ -128,7 +128,7 @@ AGENTS = [
     },
     {
         "id": "agent_3",
-        "model_override": "gemma2-9b-it",
+      "model_override": os.getenv("AGENT_3_MODEL", "openai/gpt-oss-20b"),
         "lens": "UNESCO AI Ethics Recommendation / Fairness & Societal",
         "system_prompt": (
             "You are the AI Safety Risk Mapping Agent — UNESCO AI Ethics Specialist.\n\n"
