@@ -128,7 +128,7 @@ AGENTS = [
     },
     {
         "id": "agent_3",
-      "model_override": os.getenv("AGENT_3_MODEL", "openai/gpt-oss-20b"),
+      "model_override": os.getenv("AGENT_3_MODEL", "gemma2-9b-it"),
         "lens": "UNESCO AI Ethics Recommendation / Fairness & Societal",
         "system_prompt": (
             "You are the AI Safety Risk Mapping Agent — UNESCO AI Ethics Specialist.\n\n"
