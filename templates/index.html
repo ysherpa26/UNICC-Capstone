@@ -351,34 +351,107 @@
     .badge-l1 {
       padding: 0.375rem 1rem;
     }
-    
-    .confidence-wrapper {
-      margin-top: 1.5rem;
+
+    /* --- Hero verdict + confidence two-column layout --- */
+    .verdict-hero-row {
+      display: flex;
+      gap: 1.5rem;
       margin-bottom: 1.5rem;
     }
-    
-    .confidence-label {
+
+    .verdict-hero-card {
+      flex: 1;
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 180px;
+    }
+
+    .verdict-hero-card .hero-label {
+      font-size: 0.6875rem;
       font-weight: 700;
-      margin-bottom: 0.25rem;
-      display: block;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray-700);
+      margin-bottom: 0.75rem;
     }
-    
-    .confidence-track {
-      height: 6px;
-      background-color: var(--gray-200);
-      border-radius: 3px;
-      overflow: hidden;
-      margin-bottom: 0.25rem;
+
+    .verdict-hero-card .hero-badge {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.625rem 2rem;
+      border-radius: 8px;
+      color: var(--white);
+      margin-bottom: 0.75rem;
     }
-    
-    .confidence-fill {
-      height: 100%;
-      border-radius: 3px;
+
+    .verdict-hero-card .hero-badge.badge-approve { background-color: var(--green); }
+    .verdict-hero-card .hero-badge.badge-review  { background-color: var(--amber); color: var(--black); }
+    .verdict-hero-card .hero-badge.badge-reject  { background-color: var(--dark-red); }
+
+    .verdict-hero-card .hero-desc {
+      font-size: 0.8125rem;
+      color: var(--gray-700);
+      margin: 0;
+      max-width: 280px;
     }
-    
-    .confidence-desc {
+
+    /* Circular confidence gauge */
+    .confidence-circle-wrap {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      margin-bottom: 0.75rem;
+    }
+
+    .confidence-circle-wrap svg {
+      transform: rotate(-90deg);
+      width: 120px;
+      height: 120px;
+    }
+
+    .conf-track {
+      fill: none;
+      stroke: var(--gray-200);
+      stroke-width: 10;
+    }
+
+    .conf-fill {
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.8s ease, stroke 0.4s ease;
+    }
+
+    .confidence-circle-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.625rem;
+      font-weight: 800;
+      color: var(--black);
+    }
+
+    .confidence-sub {
       font-size: 0.75rem;
       color: var(--gray-700);
+      max-width: 180px;
+    }
+
+    @media (max-width: 600px) {
+      .verdict-hero-row {
+        flex-direction: column;
+      }
     }
     
     .callout {
@@ -866,24 +939,30 @@
           <span class="value" id="res-agent-type"></span>
         </div>
         
-        <div class="card">
-          <span class="section-label">Overall Verdict</span>
-          
-          <div style="margin-bottom: 0.5rem;">
-            <div id="res-verdict-badge" class="badge badge-l1"></div>
+        <div class="verdict-hero-row">
+          <!-- Left: Verdict -->
+          <div class="verdict-hero-card">
+            <span class="hero-label">Final Verdict</span>
+            <div id="res-verdict-badge" class="hero-badge badge-l1"></div>
+            <p id="res-verdict-desc" class="hero-desc"></p>
           </div>
-          <p id="res-verdict-desc" class="label"></p>
-
-          <div class="confidence-wrapper">
-            <span class="confidence-label" id="res-confidence-text"></span>
-            <div class="confidence-track">
-              <div id="res-confidence-fill" class="confidence-fill"></div>
+          <!-- Right: Confidence -->
+          <div class="verdict-hero-card">
+            <span class="hero-label">Expert Confidence</span>
+            <div class="confidence-circle-wrap">
+              <svg viewBox="0 0 120 120">
+                <circle class="conf-track" cx="60" cy="60" r="50"></circle>
+                <circle id="res-confidence-ring" class="conf-fill" cx="60" cy="60" r="50"
+                        stroke-dasharray="314.16" stroke-dashoffset="314.16"></circle>
+              </svg>
+              <div class="confidence-circle-text" id="res-confidence-text">0%</div>
             </div>
-            <span class="confidence-desc">How strongly the three experts agreed on this verdict</span>
+            <span class="confidence-sub">How strongly the three experts agreed on this verdict</span>
           </div>
+        </div>
 
-          <p id="res-synth-summary" style="margin-top: 1.5rem;"></p>
-
+        <div class="card">
+          <p id="res-synth-summary" style="margin-top: 0;"></p>
           <div id="res-disagreements-box" class="callout"></div>
         </div>
 
@@ -925,7 +1004,7 @@
     /* ===== ALL JS HERE ===== */
 
     // --- MOCK DATA ---
-    const MOCK_MODE = true;
+    const MOCK_MODE = false;
     
     const MOCK_RESPONSE = {
       "report_meta": {
@@ -1095,7 +1174,7 @@
     // --- functionName: renderResults: Renders the API response into State 3 ---
     function renderResults(data) {
       // 1. Submitted profile
-      const modelSum = data.model_summary || {};
+      const modelSum = (data.agent_assessments && data.agent_assessments[0] && data.agent_assessments[0].model_summary) || {};
       document.getElementById('res-agent-name').textContent = modelSum.name || "Unknown Agent";
       document.getElementById('res-agent-type').textContent = modelSum.type || "Unknown Type";
       
@@ -1104,7 +1183,7 @@
       const descEl = document.getElementById('res-verdict-desc');
       const v = data.final_recommendation || "review";
       
-      badgeEl.className = 'badge badge-l1'; // reset
+      badgeEl.className = 'hero-badge'; // reset
       
       if (v === 'approve') {
         badgeEl.textContent = 'APPROVE';
@@ -1120,21 +1199,29 @@
         descEl.textContent = 'This agent has issues that need to be addressed before deployment';
       }
       
-      // 3. Confidence
-      const confValue = (data.confidence !== undefined) ? data.confidence : 85;
-      const confText = document.getElementById('res-confidence-text');
-      const confFill = document.getElementById('res-confidence-fill');
-      
-      confText.textContent = `Confidence %: ${confValue}%`;
-      confFill.style.width = `${confValue}%`;
-      
-      if (confValue >= 80) {
-        confFill.style.backgroundColor = 'var(--green)';
-      } else if (confValue >= 50) {
-        confFill.style.backgroundColor = 'var(--amber)';
-      } else {
-        confFill.style.backgroundColor = 'var(--dark-red)';
+      // 3. Confidence (circular gauge)
+      // Normalise: if backend returns 0-1 decimal, scale to 0-100
+      let confValue = (data.confidence !== undefined) ? data.confidence : 85;
+      if (confValue > 0 && confValue <= 1) {
+        confValue = confValue * 100;
       }
+      confValue = Math.round(confValue * 10) / 10;   // round to 1 decimal place
+      const confText = document.getElementById('res-confidence-text');
+      const confRing = document.getElementById('res-confidence-ring');
+
+      // SVG circle: circumference = 2 * π * r = 2 * π * 50 ≈ 314.16
+      const circumference = 314.16;
+      const offset = circumference - (confValue / 100) * circumference;
+      confText.textContent = `${confValue}%`;
+      confRing.style.strokeDashoffset = offset;
+
+      let confColor = 'var(--green)';
+      if (confValue < 50) {
+        confColor = 'var(--dark-red)';
+      } else if (confValue < 80) {
+        confColor = 'var(--amber)';
+      }
+      confRing.style.stroke = confColor;
       
       // 4. Synthesized Summary
       const synthText = data.synthesized_summary || data.executive_summary || "No executive summary provided.";
