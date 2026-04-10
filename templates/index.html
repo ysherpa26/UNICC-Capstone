@@ -500,56 +500,93 @@
     .expert-container {
       margin-top: 2.5rem;
     }
-    
+
     .expert-intro {
       color: var(--gray-700);
       margin-bottom: 1.5rem;
       font-size: 0.9375rem;
     }
-    
+
+    /* Horizontal row of expert cards */
+    #res-l2-accordion {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
     .panel {
       background-color: var(--white);
       border: 1px solid var(--gray-200);
       border-radius: 8px;
-      margin-bottom: 1rem;
       overflow: hidden;
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
     }
-    
+
     .panel-header {
-      padding: 1rem 1.5rem;
-      background-color: var(--white);
+      padding: 0.875rem 1.25rem;
+      background-color: var(--primary-blue);
       display: flex;
       justify-content: space-between;
       align-items: center;
       cursor: pointer;
       user-select: none;
     }
-    
+
     .panel-header:hover {
-      background-color: var(--gray-50);
+      background-color: var(--blue-hover);
     }
-    
+
     .panel-title {
       font-weight: 700;
-      color: var(--black);
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.75rem;
+      font-size: 0.9375rem;
     }
-    
+
+    /* White text only inside the expert accordion blue headers */
+    #res-l2-accordion .panel-title {
+      color: var(--white);
+    }
+
     .panel-icon {
-      color: var(--gray-400);
       font-size: 0.75rem;
     }
-    
+
+    #res-l2-accordion .panel-icon {
+      color: rgba(255,255,255,0.7);
+    }
+
     .panel-content {
-      padding: 0 1.5rem 1.5rem 1.5rem;
+      padding: 0 1.25rem 1.25rem 1.25rem;
       border-top: 1px solid var(--gray-200);
       display: none;
+      flex: 1;
     }
-    
+
     .panel.expanded .panel-content {
       display: block;
+    }
+
+    .expert-framework-label {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--primary-blue);
+      background-color: #E8F1FA;
+      padding: 0.25rem 0.625rem;
+      border-radius: 4px;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      #res-l2-accordion {
+        flex-direction: column;
+      }
     }
     
     .panel-section-title {
@@ -754,9 +791,17 @@
       cursor: pointer;
       user-select: none;
     }
-    
+
+    .deliberation-header .panel-title {
+      color: var(--black);
+    }
+
+    .deliberation-header .panel-icon {
+      color: var(--gray-400);
+    }
+
     .deliberation-header:hover {
-      background-color: var(--gray-50);
+      background-color: var(--gray-100);
     }
     
     .deliberation-content {
@@ -1294,11 +1339,12 @@
       };
 
       reports.forEach((report, index) => {
-        let agentName = `Expert ${index + 1}: General Analysis`;
+        // Determine framework name for inside the expanded content
         const gen = (report.report_meta && report.report_meta.generator) || `agent_${index + 1}`;
-        if (gen.includes('eu_ai_act') || index === 0) agentName = `Expert ${index + 1}: EU AI Act Analysis`;
-        else if (gen.includes('owasp') || index === 1) agentName = `Expert ${index + 1}: OWASP Security Analysis`;
-        else if (gen.includes('unesco') || index === 2) agentName = `Expert ${index + 1}: UNESCO Ethics Analysis`;
+        let frameworkName = 'General Analysis';
+        if (gen.includes('eu_ai_act') || index === 0) frameworkName = 'EU AI Act Analysis';
+        else if (gen.includes('owasp') || index === 1) frameworkName = 'OWASP Security Analysis';
+        else if (gen.includes('unesco') || index === 2) frameworkName = 'UNESCO Ethics Analysis';
 
         const panel = document.createElement('div');
         panel.className = 'panel';
@@ -1309,12 +1355,12 @@
         if (rec === 'approve') { badgeClass = 'badge-approve'; badgeText = 'APPROVE'; }
         else if (rec === 'hold_and_fix') { badgeClass = 'badge-reject'; badgeText = 'REJECT'; }
 
-        // Header
+        // Header — short title only: "Expert 1", "Expert 2", etc.
         const header = document.createElement('div');
         header.className = 'panel-header';
         header.innerHTML = `
           <div class="panel-title">
-            <span>${agentName}</span>
+            <span>Expert ${index + 1}</span>
             <span class="badge ${badgeClass}" style="font-size: 0.6875rem; padding: 0.125rem 0.5rem;">${badgeText}</span>
           </div>
           <div class="panel-icon">▶</div>
@@ -1324,10 +1370,16 @@
         const content = document.createElement('div');
         content.className = 'panel-content';
 
+        // Framework label (shown inside expanded content)
+        const fwLabel = document.createElement('span');
+        fwLabel.className = 'expert-framework-label';
+        fwLabel.textContent = frameworkName;
+        content.appendChild(fwLabel);
+
         // Executive Summary
         if (report.executive_summary) {
           const p = document.createElement('p');
-          p.style.marginTop = '1.5rem';
+          p.style.marginTop = '0.75rem';
           p.textContent = report.executive_summary;
           content.appendChild(p);
         }
