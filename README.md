@@ -36,7 +36,13 @@ GROQ_API_KEY=your_key_here
 ```bash
 python server.py
 ```
-Server starts at http://localhost:8000
+
+Expected output on successful startup:
+```
+[config] Using Groq API (default model: llama-3.1-8b-instant)
+Server running at http://localhost:8000
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+```
 
 ### Submit an AI Agent for Evaluation
 1. Open http://localhost:8000 in your browser
