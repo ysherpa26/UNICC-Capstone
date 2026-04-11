@@ -129,22 +129,24 @@ async def evaluate(request: Request):
     # the 7 abstract fields alone.
     #
     # Best-effort: never fails the request. If the inspector fails,
-    # the pipeline runs on the 7 fields alone.
-    # Only runs when the user submitted a GitHub URL (manual form
-    # submissions skip this — there's no repo to inspect).
+    # the pipeline runs on the 7 fields alone — but we surface a
+    # warning to the user so shallow analysis isn't mistaken for
+    # deep analysis.
     # ------------------------------------------------------------
+    evidence_status = "not_applicable"  # manual form submissions
     if req.github_url:
+        evidence_status = "unavailable"  # default until proven otherwise
         try:
             from repo_inspector import build_evidence_pack
             repo_evidence = build_evidence_pack(req.github_url)
             if repo_evidence and not repo_evidence.startswith("[repo_inspector error]"):
-                # Budgeted: ~3000 chars leaves room for 8K-context Groq
-                # models after system prompt and other user message content.
                 model_profile_dict["repo_evidence"] = repo_evidence[:3000]
+                evidence_status = "available"
+            else:
+                print("[server] repo_inspector returned no usable evidence")
         except Exception:
             print("[server] repo_inspector failed (non-fatal):")
             print(traceback.format_exc())
-
     # --- Run the ensemble pipeline ---
     try:
         raw_result = run_ensemble(model_profile_dict)
@@ -163,6 +165,11 @@ async def evaluate(request: Request):
 
     if result.get("error"):
         return JSONResponse(status_code=500, content=result)
+
+    # Attach evidence status so the UI can warn users when the
+    # analysis ran on the 7 abstract fields alone (e.g. private repo,
+    # network failure, or rate limit on the inspector).
+    result["evidence_status"] = evidence_status
 
     return JSONResponse(status_code=200, content=result)
 
