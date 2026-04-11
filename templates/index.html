@@ -1550,13 +1550,13 @@
       // 3. Switch to LOADING state
       showState('state-loading');
 
-      // 5. Start 120-second timeout timer
+      // 5. Start 300-second timeout timer (5 minutes)
       const timeoutId = setTimeout(function() {
         handleError(
           "Request Timed Out", 
           "The evaluation is taking longer than expected. The server may be busy — please try again."
         );
-      }, 120000);
+      }, 300000);
 
       // WARNING: Never use innerHTML to display API response data.
       // Always use textContent or createTextNode to prevent code injection.

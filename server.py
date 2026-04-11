@@ -122,19 +122,7 @@ async def evaluate(request: Request):
             ).model_dump(),
         )
 
-    # --- Run the ensemble pipeline ---
-    try:
-        raw_result = run_ensemble(model_profile_dict)
-    except Exception:
-        print(traceback.format_exc())
-        return JSONResponse(
-            status_code=500,
-            content=ErrorResponse(
-                error_code="PIPELINE_FAILED",
-                error_message="The evaluation pipeline crashed. Check server logs.",
-            ).model_dump(),
-        )
-# ------------------------------------------------------------
+    # ------------------------------------------------------------
     # Repo evidence injection: enrich model_profile with code-level
     # evidence from the actual repository so the 3 agents and the
     # judge reason from grounded, repo-specific details instead of
@@ -150,12 +138,25 @@ async def evaluate(request: Request):
             from repo_inspector import build_evidence_pack
             repo_evidence = build_evidence_pack(req.github_url)
             if repo_evidence and not repo_evidence.startswith("[repo_inspector error]"):
-                # Budgeted: ~8000 chars leaves room for 8K-context Groq
+                # Budgeted: ~3000 chars leaves room for 8K-context Groq
                 # models after system prompt and other user message content.
-                model_profile_dict["repo_evidence"] = repo_evidence[:8000]
+                model_profile_dict["repo_evidence"] = repo_evidence[:3000]
         except Exception:
             print("[server] repo_inspector failed (non-fatal):")
             print(traceback.format_exc())
+
+    # --- Run the ensemble pipeline ---
+    try:
+        raw_result = run_ensemble(model_profile_dict)
+    except Exception:
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content=ErrorResponse(
+                error_code="PIPELINE_FAILED",
+                error_message="The evaluation pipeline crashed. Check server logs.",
+            ).model_dump(),
+        )
             
     # --- Validate & return ---
     result = validate_ensemble_response(raw_result)
