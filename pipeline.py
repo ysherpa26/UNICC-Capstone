@@ -520,6 +520,7 @@ Rules:
 - All severity values MUST be floats between 0.0 and 1.0
 - compliance_mapping fields use the exact key names: eu_ai_act, iso_iec, nist_ai_rmf, ieee, unesco
 - executive_summary must be 2-4 sentences
+- executive_summary and gaps_and_actions MUST reference specific technologies and file names mentioned in the Stage 1 risks you receive — keep findings grounded in concrete observations, not generic language
 - gaps_and_actions must have at least one entry
 """
 
@@ -536,9 +537,10 @@ def generate_compliance_report(
     model_override = agent_config.get("model_override")
     agent_id = agent_config.get("id", "agent_unknown")
 
+    profile_for_reporter = {k: v for k, v in model_profile.items() if k != "repo_evidence"}
     user_message = (
         f"Produce the compliance report JSON for the following inputs.\n\n"
-        f"model_profile:\n{json.dumps(model_profile, indent=2)}\n\n"
+        f"model_profile:\n{json.dumps(profile_for_reporter, indent=2)}\n\n"
         f"risk_mapping:\n{json.dumps(risk_mapping_output, indent=2)}\n\n"
         f"category_summary:\n{json.dumps(rollup_output['category_summary'], indent=2)}\n\n"
         f"top_risks:\n{json.dumps(rollup_output['top_risks'], indent=2)}\n\n"
