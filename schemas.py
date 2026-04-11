@@ -169,6 +169,15 @@ class TopRisk(BaseModel):
     severity: float = 0.0
     judgement: str = "needs_attention"  # lenient — string not enum
 
+    @field_validator("risk_id", mode="before")
+    @classmethod
+    def _coerce_risk_id(cls, v):
+        if v is None:
+            return ""
+        if isinstance(v, int):
+            return f"R{v:03d}"
+        return str(v)   
+
     @field_validator("severity")
     @classmethod
     def clamp_risk_severity(cls, v):
