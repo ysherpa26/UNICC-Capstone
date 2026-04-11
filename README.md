@@ -7,7 +7,7 @@ Multi-agent AI safety evaluation platform. Submit an AI agent (via GitHub URL or
 ## Quick Start
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.11+
 - Git (required for cloning repositories during evaluation)
 - API key for either Anthropic or Groq 
 

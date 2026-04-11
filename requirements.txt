@@ -1,8 +1,7 @@
-anthropic
-groq
-fastapi
-uvicorn
-requests
-gitpython
-python-dotenv
-pydantic
+# Pinned versions for reproducibility — tested on Python 3.10+
+anthropic==0.89.0
+groq==1.1.2
+fastapi==0.135.3
+uvicorn==0.43.0
+python-dotenv==1.2.2
+pydantic==2.12.5
