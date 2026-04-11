@@ -113,14 +113,6 @@ graph TD
 | `GET` | `/api/health` | Server status and detected LLM provider |
 | `POST` | `/api/evaluate` | Submit agent for evaluation (accepts `github_url` or `model_profile` JSON) |
 
-## Example Output
-
-A sample evaluation response for VeriMedia is included at
-[`examples/verimedia_output.json`](examples/verimedia_output.json).
-This shows the full ensemble wrapper structure — three independent
-expert assessments, the synthesized verdict, and the deliberation log —
-without requiring an API key to generate.
-
 ## Troubleshooting
 
 ### `PROFILE_EXTRACTION_FAILED`
