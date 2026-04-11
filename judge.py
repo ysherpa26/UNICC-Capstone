@@ -210,26 +210,57 @@ def _run_judge_llm(agent_results: list, model_profile: dict) -> tuple[str, list[
 # Step 2 — Python: majority vote, confidence, disagreements
 # ---------------------------------------------------------------------------
 
+def _compute_severity_spread(agent_results: list) -> float:
+    """
+    Computes the maximum severity spread across agents for dynamic confidence.
+    Returns a value between 0.0 and 1.0 representing how much agents disagree
+    on severity assessments.
+    """
+    categories = ["Technical", "Ethical", "Legal", "Societal"]
+    valid = [r for r in agent_results if not r.get("error")]
+    if len(valid) < 2:
+        return 0.0
+
+    spreads = []
+    for cat in categories:
+        severities = []
+        for result in valid:
+            cat_data = result.get("category_summary", {}).get(cat, {})
+            avg = cat_data.get("avg_severity")
+            if avg is not None:
+                severities.append(float(avg))
+        if len(severities) >= 2:
+            spreads.append(max(severities) - min(severities))
+
+    return max(spreads) if spreads else 0.0
+
+
 def _majority_vote(agent_results: list) -> tuple[str, float, list[str]]:
     """
     Runs majority vote across successful agent final_recommendations only.
     Errored agents are excluded from the vote entirely.
 
     Conservative escalation rule:
-      - If any successful agent says hold_and_fix on a split → hold_and_fix wins
+      - If any successful agent says hold_and_fix on a 2/3 split, escalation is
+        applied UNLESS the dissenting agent's average severity is below 0.3 and
+        both other agents agree on 'approve' — in that case the low-severity
+        dissent does not override the majority.
       - 2/3 majority → that recommendation wins
       - All differ → most conservative (hold_and_fix) wins
 
-    Confidence is capped based on how many agents succeeded:
-      3/3 unanimous → 0.95    3/3 majority → 0.70
-      2/3 agree     → 0.60    2/3 disagree → 0.40
-      1/3           → 0.35    0/3          → 0.0
+    Confidence is computed dynamically from actual severity distributions:
+      base confidence is set by agreement level (unanimous, majority, split),
+      then adjusted by severity spread across agents:
+        confidence = base - (severity_spread * 0.3)
+      This grounds confidence in real data rather than hardcoded thresholds.
 
     Returns (final_recommendation, confidence, disagreements_list).
     """
     total = len(agent_results)
     failed = sum(1 for r in agent_results if r.get("error"))
     succeeded = total - failed
+
+    severity_spread = _compute_severity_spread(agent_results)
 
     # Collect recommendations from successful agents only
     recommendations = []
@@ -267,12 +298,18 @@ def _majority_vote(agent_results: list) -> tuple[str, float, list[str]]:
     # All succeeded agents agree
     if most_common[0][1] == succeeded:
         final = most_common[0][0]
-        confidence = CONFIDENCE_ALL_AGREE if succeeded == 3 else 0.60
+        base = CONFIDENCE_ALL_AGREE if succeeded == 3 else 0.60
+        confidence = round(max(0.0, min(1.0, base - severity_spread * 0.3)), 4)
         disagreements = []
         if failed > 0:
             disagreements.append(
                 f"{failed} of {total} agents failed. "
                 f"Remaining {succeeded} agents unanimously recommended '{final}'."
+            )
+        if severity_spread > 0.0:
+            disagreements.append(
+                f"Confidence adjusted by severity spread ({round(severity_spread, 3)}): "
+                f"base {base} → {confidence}."
             )
 
     # 2/3 majority (only possible when succeeded == 3)
@@ -280,22 +317,50 @@ def _majority_vote(agent_results: list) -> tuple[str, float, list[str]]:
         majority_rec = most_common[0][0]
         minority_rec = most_common[1][0]
 
-        # Conservative escalation: if minority is hold_and_fix, it wins
-        if minority_rec == "hold_and_fix":
+        # Weighted escalation: check if dissenting agent's severity is low enough
+        # to not override the majority
+        if minority_rec == "hold_and_fix" and majority_rec == "approve":
+            # Find the dissenting agent and check its average severity
+            dissent_avg_severity = _dissenting_agent_avg_severity(
+                agent_results, recommendations, minority_rec
+            )
+            if dissent_avg_severity < 0.3:
+                final = majority_rec
+                escalation_note = (
+                    f"Dissenting agent recommended '{minority_rec}' but its average severity "
+                    f"({round(dissent_avg_severity, 3)}) is below 0.3 threshold — "
+                    f"majority '{majority_rec}' prevails."
+                )
+            else:
+                final = "hold_and_fix"
+                escalation_note = (
+                    f"Conservative escalation applied: dissenting agent severity "
+                    f"({round(dissent_avg_severity, 3)}) >= 0.3 — '{final}' wins."
+                )
+        elif minority_rec == "hold_and_fix":
             final = "hold_and_fix"
+            escalation_note = f"Conservative escalation applied: '{final}'."
         else:
             final = majority_rec
+            escalation_note = f"Majority recommendation applied: '{final}'."
 
-        confidence = CONFIDENCE_MAJORITY
+        base = CONFIDENCE_MAJORITY
+        confidence = round(max(0.0, min(1.0, base - severity_spread * 0.3)), 4)
         disagreements = [
             f"2 agents recommended '{majority_rec}', 1 agent recommended '{minority_rec}'. "
-            f"Conservative escalation applied: '{final}'."
+            + escalation_note
         ]
+        if severity_spread > 0.0:
+            disagreements.append(
+                f"Confidence adjusted by severity spread ({round(severity_spread, 3)}): "
+                f"base {base} → {confidence}."
+            )
 
     # 2 succeeded but disagree
     elif succeeded == 2 and most_common[0][1] == 1:
         final = max(recommendations, key=lambda r: ESCALATION_ORDER.index(r))
-        confidence = CONFIDENCE_NO_MAJORITY
+        base = CONFIDENCE_NO_MAJORITY
+        confidence = round(max(0.0, min(1.0, base - severity_spread * 0.3)), 4)
         disagreements = [
             f"2 agents succeeded but disagreed: {', '.join(recommendations)}. "
             f"Most conservative recommendation applied: '{final}'. "
@@ -305,13 +370,35 @@ def _majority_vote(agent_results: list) -> tuple[str, float, list[str]]:
     # 3-way split (all 3 succeeded, all different)
     else:
         final = max(recommendations, key=lambda r: ESCALATION_ORDER.index(r))
-        confidence = CONFIDENCE_NO_MAJORITY
+        base = CONFIDENCE_NO_MAJORITY
+        confidence = round(max(0.0, min(1.0, base - severity_spread * 0.3)), 4)
         disagreements = [
             f"Three-way split: {', '.join(recommendations)}. "
             f"Most conservative recommendation applied: '{final}'."
         ]
 
     return final, confidence, disagreements
+
+
+def _dissenting_agent_avg_severity(
+    agent_results: list, recommendations: list, minority_rec: str
+) -> float:
+    """
+    Returns the overall average severity of the dissenting agent (the one
+    whose recommendation matches minority_rec).
+    """
+    valid = [r for r in agent_results if not r.get("error")]
+    for i, result in enumerate(valid):
+        rec = result.get("final_recommendation", "approve_with_conditions")
+        if rec == minority_rec:
+            cat_summary = result.get("category_summary", {})
+            severities = [
+                v.get("avg_severity", 0.0)
+                for v in cat_summary.values()
+                if isinstance(v, dict)
+            ]
+            return sum(severities) / len(severities) if severities else 0.0
+    return 0.5  # fallback
 
 
 def _build_disagreements(agent_results: list, base_disagreements: list) -> list[str]:
@@ -398,6 +485,14 @@ def build_ensemble(
 
         # Step 3 — Assemble ensemble wrapper (exact contract schema)
         clean_agent_assessments = [_strip_internal_keys(r) for r in agent_results]
+
+        # Compute severity spread for transparency in deliberation_log
+        severity_spread = _compute_severity_spread(agent_results)
+        if severity_spread > 0.0:
+            deliberation_log.append(
+                f"Severity spread across agents: {round(severity_spread, 3)} "
+                f"(used to adjust confidence from base value)."
+            )
 
         ensemble = {
             "ensemble_meta": {
