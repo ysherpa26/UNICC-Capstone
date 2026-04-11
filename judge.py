@@ -73,6 +73,9 @@ DELIBERATION_LOG:
 - <point 3>
 - <point 4>
 
+You will also receive a repository evidence excerpt. Your synthesized_summary MUST reference \
+specific technologies and file names from the evidence when relevant to the debate between agents.
+
 Be concise and specific. Reference the actual risks and recommendations from the agent reports.
 """
 
@@ -80,19 +83,17 @@ Be concise and specific. Reference the actual risks and recommendations from the
 # Step 1 — LLM synthesis
 # ---------------------------------------------------------------------------
 
-def _run_judge_llm(agent_results: list) -> tuple[str, list[str]]:
+def _run_judge_llm(agent_results: list, model_profile: dict) -> tuple[str, list[str]]:
     """
     LLM call: receives all 3 agent outputs, returns (synthesized_summary, deliberation_log).
     Parses free-text output — no JSON constraint on the LLM here.
     """
     # Build a compact summary of each agent's report for the judge prompt
     agent_summaries = []
+    failed_count = 0
     for result in agent_results:
         if result.get("error"):
-            agent_summaries.append(
-                f"Agent {result.get('_agent_id', 'unknown')} ({result.get('_agent_lens', 'unknown lens')}): "
-                f"FAILED — {result.get('error_message', 'unknown error')}"
-            )
+            failed_count += 1
             continue
 
         rec = result.get("final_recommendation", "unknown")
@@ -122,8 +123,27 @@ def _run_judge_llm(agent_results: list) -> tuple[str, list[str]]:
             f"  Category summary:\n{cat_lines}"
         )
 
+    evidence = model_profile.get("repo_evidence", "")
+    evidence_block = ""
+    if evidence:
+        evidence_block = (
+            f"REPOSITORY EVIDENCE EXCERPT (static analysis of the repo):\n"
+            f"{evidence[:1500]}\n\n---\n\n"
+        )
+
+    failed_notice = ""
+    if failed_count > 0:
+        failed_notice = (
+            f"NOTE: {failed_count} of 3 agents failed to complete evaluation. "
+            f"Do not synthesize findings from failure messages. Note the reduced "
+            f"agent coverage explicitly in your deliberation log.\n\n"
+        )
+
     user_message = (
-        "Here are the 3 agent compliance reports. Write your synthesis and deliberation log.\n\n"
+        "Here are the 3 agent compliance reports. Write your synthesis and "
+        "deliberation log, grounded in the repository evidence below.\n\n"
+        + failed_notice
+        + evidence_block
         + "\n\n---\n\n".join(agent_summaries)
     )
 
@@ -192,37 +212,71 @@ def _run_judge_llm(agent_results: list) -> tuple[str, list[str]]:
 
 def _majority_vote(agent_results: list) -> tuple[str, float, list[str]]:
     """
-    Runs majority vote across agent final_recommendations.
+    Runs majority vote across successful agent final_recommendations only.
+    Errored agents are excluded from the vote entirely.
 
     Conservative escalation rule:
-      - If any agent says hold_and_fix on a split → hold_and_fix wins
+      - If any successful agent says hold_and_fix on a split → hold_and_fix wins
       - 2/3 majority → that recommendation wins
-      - All 3 differ → most conservative (hold_and_fix) wins
+      - All differ → most conservative (hold_and_fix) wins
+
+    Confidence is capped based on how many agents succeeded:
+      3/3 unanimous → 0.95    3/3 majority → 0.70
+      2/3 agree     → 0.60    2/3 disagree → 0.40
+      1/3           → 0.35    0/3          → 0.0
 
     Returns (final_recommendation, confidence, disagreements_list).
     """
+    total = len(agent_results)
+    failed = sum(1 for r in agent_results if r.get("error"))
+    succeeded = total - failed
+
+    # Collect recommendations from successful agents only
     recommendations = []
     for result in agent_results:
         if result.get("error"):
-            # Treat failed agent as most conservative vote
-            recommendations.append("hold_and_fix")
-        else:
-            rec = result.get("final_recommendation", "approve_with_conditions")
-            if rec not in VALID_RECOMMENDATIONS:
-                rec = "approve_with_conditions"
-            recommendations.append(rec)
+            continue
+        rec = result.get("final_recommendation", "approve_with_conditions")
+        if rec not in VALID_RECOMMENDATIONS:
+            rec = "approve_with_conditions"
+        recommendations.append(rec)
+
+    # 0/3 succeeded — cannot produce a meaningful verdict
+    if succeeded == 0:
+        return (
+            "hold_and_fix",
+            0.0,
+            ["All agents failed — manual review required."],
+        )
+
+    # 1/3 succeeded — insufficient consensus
+    if succeeded == 1:
+        final = recommendations[0]
+        return (
+            final,
+            0.35,
+            [
+                f"Only 1 of {total} agents succeeded (recommendation: '{final}'). "
+                f"Insufficient consensus — manual review recommended."
+            ],
+        )
 
     counts = Counter(recommendations)
     most_common = counts.most_common()
 
-    # All 3 agree
-    if most_common[0][1] == 3:
+    # All succeeded agents agree
+    if most_common[0][1] == succeeded:
         final = most_common[0][0]
-        confidence = CONFIDENCE_ALL_AGREE
+        confidence = CONFIDENCE_ALL_AGREE if succeeded == 3 else 0.60
         disagreements = []
+        if failed > 0:
+            disagreements.append(
+                f"{failed} of {total} agents failed. "
+                f"Remaining {succeeded} agents unanimously recommended '{final}'."
+            )
 
-    # 2/3 majority
-    elif most_common[0][1] == 2:
+    # 2/3 majority (only possible when succeeded == 3)
+    elif succeeded == 3 and most_common[0][1] == 2:
         majority_rec = most_common[0][0]
         minority_rec = most_common[1][0]
 
@@ -238,13 +292,22 @@ def _majority_vote(agent_results: list) -> tuple[str, float, list[str]]:
             f"Conservative escalation applied: '{final}'."
         ]
 
-    # All 3 differ (3-way split)
-    else:
-        # Pick most conservative
+    # 2 succeeded but disagree
+    elif succeeded == 2 and most_common[0][1] == 1:
         final = max(recommendations, key=lambda r: ESCALATION_ORDER.index(r))
         confidence = CONFIDENCE_NO_MAJORITY
         disagreements = [
-            f"Three-way split: {', '.join(f'{r}' for r in recommendations)}. "
+            f"2 agents succeeded but disagreed: {', '.join(recommendations)}. "
+            f"Most conservative recommendation applied: '{final}'. "
+            f"{failed} agent(s) failed."
+        ]
+
+    # 3-way split (all 3 succeeded, all different)
+    else:
+        final = max(recommendations, key=lambda r: ESCALATION_ORDER.index(r))
+        confidence = CONFIDENCE_NO_MAJORITY
+        disagreements = [
+            f"Three-way split: {', '.join(recommendations)}. "
             f"Most conservative recommendation applied: '{final}'."
         ]
 
@@ -325,7 +388,7 @@ def build_ensemble(
     """
     try:
         # Step 1 — LLM synthesis
-        synthesized_summary, deliberation_log = _run_judge_llm(agent_results)
+        synthesized_summary, deliberation_log = _run_judge_llm(agent_results, model_profile)
 
         # Step 2 — Python: majority vote + confidence
         final_recommendation, confidence, base_disagreements = _majority_vote(agent_results)
