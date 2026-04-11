@@ -30,7 +30,7 @@ Or for Groq:
 ```
 GROQ_API_KEY=your_key_here
 ```
-**Per-agent model selection (Groq only).** When running with `GROQ_API_KEY`, you can override which Groq model each of the three expert agents uses via the `AGENT_1_MODEL`, `AGENT_2_MODEL`, and `AGENT_3_MODEL` environment variables. Sensible defaults are provided in `.env.example`. When running with `ANTHROPIC_API_KEY`, all three agents use Claude and these overrides are ignored. Before changing defaults, verify the model IDs against the current Groq production model list at https://console.groq.com/docs/models — Groq deprecates older models periodically.
+**Per-agent model selection (Groq only).** When running with `GROQ_API_KEY`, you can override which Groq model each of the three expert agents uses via the `AGENT_1_MODEL`, `AGENT_2_MODEL`, and `AGENT_3_MODEL` environment variables. We recommend the 3 best Groq models to be: `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, and `openai/gpt-oss-safeguard-20b`. Sensible defaults are provided in `.env.example`. When running with `ANTHROPIC_API_KEY`, all three agents use Claude and these overrides are ignored. Before changing defaults, verify the model IDs against the current Groq production model list at https://console.groq.com/docs/models — Groq deprecates older models periodically.
 
 ### Run
 ```bash
@@ -39,7 +39,7 @@ python server.py
 
 Expected output on successful startup:
 ```
-[config] Using Groq API (default model: llama-3.1-8b-instant)
+[config] Using Groq API (default model: openai/gpt-oss-20b)
 Server running at http://localhost:8000
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
