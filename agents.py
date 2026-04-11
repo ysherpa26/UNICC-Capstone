@@ -58,7 +58,9 @@ AGENTS = [
     },
     {
         "id": "agent_2",
-        "model_override": os.getenv("AGENT_2_MODEL", "openai/gpt-oss-20b"),
+        # Mixtral 8x7B: mixture-of-experts architecture provides a different
+        # reasoning profile from the dense Llama model used by Agent 1.
+        "model_override": os.getenv("AGENT_2_MODEL", "mixtral-8x7b-32768"),
         "lens": "OWASP Top 10 for LLMs / Technical Security",
         "system_prompt": (
             "You are the AI Safety Risk Mapping Agent — OWASP LLM Security Specialist.\n\n"
@@ -86,7 +88,9 @@ AGENTS = [
     },
     {
         "id": "agent_3",
-      "model_override": os.getenv("AGENT_3_MODEL", "openai/gpt-oss-20b"),
+        # Llama 3.1 8B Instant: smaller, faster model — provides a third
+        # distinct architecture to maximize framework diversity across agents.
+        "model_override": os.getenv("AGENT_3_MODEL", "llama-3.1-8b-instant"),
         "lens": "UNESCO AI Ethics Recommendation / Fairness & Societal",
         "system_prompt": (
             "You are the AI Safety Risk Mapping Agent — UNESCO AI Ethics Specialist.\n\n"

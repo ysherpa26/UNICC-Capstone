@@ -1,4 +1,26 @@
 #!/usr/bin/env python3
+"""
+repo_inspector.py — P2 Repository Static Analysis
+UNICC AI Safety Lab — Capstone Spring 2026
+
+Clones a GitHub repository and performs static analysis to produce a compact
+evidence pack for LLM-based risk assessment. The analysis includes:
+  - File scoring and selection (highest-signal files first)
+  - Architecture inference (frameworks, providers, AI backends)
+  - Risk surface detection (auth gaps, subprocess usage, file uploads, etc.)
+  - Evidence summarization for feeding into agent prompts
+
+What this file does:
+  Analyzes repository structure, dependencies, and code patterns to identify
+  security-relevant characteristics without executing any code.
+
+What this file does NOT do:
+  Does not run the repository code, does not make network calls beyond git clone,
+  does not modify the repository in any way.
+
+Public function:
+    build_evidence_pack(github_url: str, ...) -> str
+"""
 from __future__ import annotations
 
 import argparse
@@ -262,6 +284,20 @@ def is_readme_path(rel_path: str) -> bool:
 
 
 def score_file(root: Path, path: Path, content: str) -> FileInfo:
+    """Score a single file by path keywords, manifest detection, and content patterns.
+
+    Assigns an integer score and a set of tags (e.g. 'auth', 'ai', 'http') based
+    on path-based heuristics and regex content matching. Higher scores indicate
+    files more likely to contain security-relevant logic.
+
+    Args:
+        root: Repository root directory.
+        path: Absolute path to the file.
+        content: UTF-8 text content of the file.
+
+    Returns:
+        FileInfo dataclass with score, tags, and human-readable reasons.
+    """
     rel_path = path.relative_to(root).as_posix()
     info = FileInfo(path=path, rel_path=rel_path, content=content)
     doc_like = is_doc_like_file(path) and not is_prompt_like_path(path)
@@ -332,6 +368,18 @@ def score_file(root: Path, path: Path, content: str) -> FileInfo:
 
 
 def load_repository(root: Path, max_bytes: int) -> list[FileInfo]:
+    """Scan entire repository, score each text file, and return scored FileInfo list.
+
+    Walks the directory tree (excluding common non-source dirs like node_modules,
+    .git, __pycache__), reads every text file under max_bytes, and scores it.
+
+    Args:
+        root: Repository root directory.
+        max_bytes: Skip files larger than this byte count.
+
+    Returns:
+        List of FileInfo objects, one per readable text file.
+    """
     return [score_file(root, path, content) for path, content in iter_repo_files(root, max_bytes=max_bytes)]
 
 
@@ -370,6 +418,20 @@ def add_candidate(selected: list[FileInfo], seen: set[str], candidate: FileInfo,
 
 
 def select_files(infos: list[FileInfo], max_files: int, excluded_paths: set[str] | None = None) -> list[FileInfo]:
+    """Rank and select the most security-relevant files from scored candidates.
+
+    Uses a multi-pass strategy: first selects seed candidates (high-signal files),
+    then expands by tag-based selection, neighbor files, and ranked fallback
+    until max_files is reached.
+
+    Args:
+        infos: Scored FileInfo list from load_repository().
+        max_files: Maximum number of files to return.
+        excluded_paths: Optional set of relative paths to skip.
+
+    Returns:
+        Up to max_files FileInfo objects, ordered by relevance.
+    """
     excluded_paths = excluded_paths or set()
     candidates = [info for info in infos if is_seed_candidate(info)]
 
@@ -476,6 +538,19 @@ def summarize_purpose(readme: str, infos: list[FileInfo]) -> str:
 
 
 def infer_architecture(selected: list[FileInfo], infos: list[FileInfo]) -> list[str]:
+    """Infer system architecture from selected files and full repo structure.
+
+    Analyzes tag distributions, path patterns, and code content to detect:
+    framework type, AI/LLM providers, backend services, upload surfaces,
+    auth layers, and execution modes (subprocess, cron, etc.).
+
+    Args:
+        selected: High-signal files chosen by select_files().
+        infos: Full list of scored files from load_repository().
+
+    Returns:
+        List of human-readable architecture bullet strings.
+    """
     tags = Counter(tag for info in selected for tag in info.tags)
     lowered_paths = [info.rel_path.lower() for info in infos]
     bullets = []
@@ -680,6 +755,14 @@ def combined_selected_content(selected: list[FileInfo]) -> str:
 
 
 def detect_framework(selected: list[FileInfo]) -> str | None:
+    """Detect the primary web/app framework used in the repository.
+
+    Matches combined content of selected files against known framework patterns
+    (FastAPI, Flask, Express, Next.js, Django, etc.).
+
+    Returns:
+        Framework label string (e.g. 'FastAPI (Python)') or None if not detected.
+    """
     combined = combined_selected_content(selected[:8])
     for label, patterns in FRAMEWORK_PATTERNS:
         if any(pattern.search(combined) for pattern in patterns):
@@ -688,6 +771,18 @@ def detect_framework(selected: list[FileInfo]) -> str | None:
 
 
 def detect_providers(selected: list[FileInfo], limit: int = 4) -> list[str]:
+    """Detect AI/ML providers referenced in selected files.
+
+    Scans for import statements, SDK references, and API patterns for known
+    providers (OpenAI, Anthropic, AWS Bedrock, Google AI, Hugging Face, etc.).
+
+    Args:
+        selected: High-signal files to scan.
+        limit: Maximum number of providers to return.
+
+    Returns:
+        List of provider label strings, e.g. ['OpenAI', 'Anthropic'].
+    """
     combined = combined_selected_content(selected)
     found: list[str] = []
     # Provider detection accepts multiple matches because modern repositories
@@ -719,6 +814,14 @@ def extract_model_names(selected: list[FileInfo], limit: int = 3) -> list[str]:
 
 
 def describe_ai_backend(selected: list[FileInfo]) -> str | None:
+    """Produce a human-readable description of the AI/ML backend stack.
+
+    Combines detected providers and model names into a summary string
+    like 'Uses OpenAI (gpt-4, text-embedding-ada-002)'.
+
+    Returns:
+        Description string, or None if no AI backend detected.
+    """
     providers = detect_providers(selected)
     model_names = extract_model_names(selected)
     provider_text = ', '.join(providers[:3]) if providers else None
@@ -805,6 +908,15 @@ def infer_data_flow(selected: list[FileInfo]) -> list[str]:
 
 
 def infer_risk_surfaces(selected: list[FileInfo]) -> list[str]:
+    """Identify security-relevant code patterns (risk surfaces) in selected files.
+
+    Maps file tags to risk categories: HTTP input handling, file uploads,
+    external API calls, LLM/prompt construction, subprocess execution,
+    and possible hardcoded secrets.
+
+    Returns:
+        List of risk surface description strings with file references.
+    """
     mapping = {
         'http': 'Input handling points',
         'files': 'File uploads or filesystem access',
@@ -831,6 +943,14 @@ def infer_risk_surfaces(selected: list[FileInfo]) -> list[str]:
 
 
 def evidence_summary(selected: list[FileInfo]) -> list[str]:
+    """Produce a compact bullet-point summary of key evidence from selected files.
+
+    Combines framework detection, AI backend description, risk surfaces,
+    and data flow analysis into a short list suitable for LLM context.
+
+    Returns:
+        List of summary bullet strings (prefixed with '- ').
+    """
     lines = []
     framework = detect_framework(selected)
     ai_backend = describe_ai_backend(selected)
