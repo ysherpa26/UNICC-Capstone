@@ -19,9 +19,12 @@ pip install -r requirements.txt
 ```
 
 ### Configuration
+**Required — the server will not start without an API key.** Copy the environment template and add your key:
 ```bash
 cp .env.example .env
 ```
+On Windows PowerShell, use `Copy-Item .env.example .env` instead.
+
 Open `.env` and add your API key:
 ```
 ANTHROPIC_API_KEY=your_key_here
