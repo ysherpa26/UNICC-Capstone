@@ -74,7 +74,7 @@ elif _groq_key:
         from groq import Groq
         _client = Groq(api_key=_groq_key)
         _provider = "groq"
-        _default_model = "llama-3.1-8b-instant"
+        _default_model = (os.getenv("AGENT_1_MODEL") or "openai/gpt-oss-20b").strip()
         print(f"[config] Using Groq API (default model: {_default_model})")
     except ImportError:
         _init_error = (
