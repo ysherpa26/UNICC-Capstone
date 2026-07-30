@@ -2,7 +2,8 @@
 
 Multi-agent AI safety evaluation platform. Submit an AI agent (via GitHub URL or manual description) and receive independent safety assessments from three expert modules grounded in different frameworks (EU AI Act, OWASP Top 10 for LLMs, UNESCO AI Ethics), plus a synthesized council verdict.
 
-**Authors:** Sharon Cherian, Andrea Leon
+**Authors:** Sharon Cherian, Andrea Leon, Yang Sherpa
+
 
 ## Quick Start
 
